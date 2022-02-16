@@ -16,7 +16,7 @@ def frames2vid(base_filename, num_frames, bottom_cam_id=0, framerate=100, num_ca
      
      for ii in range(num_cams):
           iCam = "cam"+str(ii)
-          if iCam == bottom_cam_id:
+          if iCam == "cam"+str(bottom_cam_id):
                os.system(f'ffmpeg -framerate {framerate} -f image2 -i ./{base_filename}_%{num_frame_digits}d_{iCam}.jpg -vcodec libx264 -crf 10 -pix_fmt yuv420p -filter:v "scale= iw/2:ih/2, vflip" -an {destination}/{base_filename}_{iCam}.mp4')
           else:
                os.system(f'ffmpeg -framerate {framerate} -f image2 -i ./{base_filename}_%{num_frame_digits}d_{iCam}.jpg -vcodec libx264 -crf 10 -pix_fmt yuv420p -filter:v "scale= iw/2:ih/2" -an {destination}/{base_filename}_{iCam}.mp4')

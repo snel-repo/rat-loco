@@ -27,12 +27,14 @@ if __name__ == '__main__':
      if len(list(sys.argv)) == 3:
           frames2vid(sys.argv[1], sys.argv[2])
      elif len(list(sys.argv)) == 4:
-          frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4])
+          frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3])
      elif len(list(sys.argv)) == 5:
-          frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4], bottom_cam_id=sys.argv[5])
+          frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4])
      elif len(list(sys.argv)) == 6:
+          frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4], bottom_cam_id=sys.argv[5])
+     elif len(list(sys.argv)) == 7:
           frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4], bottom_cam_id=sys.argv[5], num_cams=sys.argv[6])
      elif len(list(sys.argv)) == 7:
           frames2vid(sys.argv[1], sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4], bottom_cam_id=sys.argv[5], num_cams=sys.argv[6], framerate=sys.argv[7])
      else:
-          raise Exception("enter at least 2 arguments and less than 6! :) \nInputs: base_filename, num_frames, destination, bottom_cam_id, num_cams, framerate")
+          raise Exception("enter at least 2 arguments and less than 7! :) \nInputs: base_filename, num_frames, destination, bottom_cam_id, num_cams, framerate")

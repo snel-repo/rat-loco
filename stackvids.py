@@ -23,7 +23,7 @@ def stackvids(base_filename, destination='.', stack_type='hstack', num_cams=4):
           os.system(f'ffmpeg -i {base_filename}_cam0.mp4 -i {base_filename}_cam1.mp4 -i {base_filename}_cam2.mp4 -i {base_filename}_cam3.mp4 -filter_complex {stack_type}=inputs=4 {destination}/stack_{base_filename}.mp4')
 
 if __name__ == '__main__':
-     print(list(sys.argv))
+     # print(list(sys.argv))
      if len(list(sys.argv)) == 2:
           stackvids(sys.argv[1])
      elif len(list(sys.argv)) == 3:

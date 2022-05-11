@@ -20,7 +20,7 @@ def frames2vid(base_filename, num_frames, downsampling_factor=1, destination='.'
           # if iCam == "cam"+str(bottom_cam_id):
           #      os.system(f'ffmpeg -framerate {framerate} -f image2 -i ./{base_filename}_%{num_frame_digits}d_{iCam}.jpg -vcodec libx264 -crf 10 -pix_fmt yuv420p -filter:v "scale= iw/{downsampling_factor}:ih/{downsampling_factor}, vflip" -an {destination}/{base_filename}_{iCam}.mp4')
           # else:
-          os.system(f'ffmpeg -framerate {framerate} -f image2 -i ./{base_filename}_%{num_frame_digits}d_{iCam}.jpg -vcodec libx264 -crf 2 -pix_fmt gray -filter:v "scale= iw/{downsampling_factor}:ih/{downsampling_factor}" -an {destination}/{base_filename}_{iCam}.mp4')
+          os.system(f'ffmpeg -framerate {framerate} -f image2 -i ./{base_filename}_%{num_frame_digits}d_{iCam}.jpg -vcodec libx264 -crf 2 -pix_fmt yuv420p -filter:v "scale= iw/{downsampling_factor}:ih/{downsampling_factor},hue=s=0" -an {destination}/{base_filename}_{iCam}.mp4')
 
 if __name__ == '__main__':
      print(list(sys.argv))

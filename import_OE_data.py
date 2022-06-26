@@ -1,7 +1,6 @@
 import os
-import pdb
-from open_ephys.analysis import Session
 import numpy as np
+from open_ephys.analysis import Session
 from datetime import datetime
 
 def import_OE_data(directory_list):
@@ -31,13 +30,13 @@ def import_OE_data(directory_list):
             # create list of session dates for the ones that were extracted
             date_list.append(session.recordnodes[0].directory.split('/')[-2]) # grab the date out of the path
             recording_path_list.append(session.recordnodes[0].recordings[iExperiment].directory)
+            continuous_ephys_data_list[iRecording][0].samples = np.array(continuous_ephys_data_list[iRecording][0].samples,dtype='float32')
 
-    for iChannel in range(session.recordnodes[0].recordings[iExperiment].info['continuous'][0]['num_channels']):
-        # Multiply each recording samples by the measured "bit_volts" value.
-        # This converts from 16-bit number to uV for continuous channels and V for ADC channels
-        continuous_ephys_data_list[iRecording][0].samples = continuous_ephys_data_list[iRecording][0].samples*session.recordnodes[0].recordings[iExperiment].info['continuous'][0]['channels'][iChannel]['bit_volts']
-    
-    
+            for iChannel in range(session.recordnodes[0].recordings[iExperiment].info['continuous'][0]['num_channels']):
+                # Multiply each recording samples by the measured "bit_volts" value.
+                # This converts from 16-bit number to uV for continuous channels and V for ADC channels
+                continuous_ephys_data_list[iRecording][0].samples[:,iChannel] = continuous_ephys_data_list[iRecording][0].samples[:,iChannel]*session.recordnodes[0].recordings[iExperiment].info['continuous'][0]['channels'][iChannel]['bit_volts']
+                
     list_of_session_IDs = []                                        # stores unique session identifiers
     for iDir, directory_path in enumerate(recording_path_list):
         file_list = os.listdir(directory_path)
@@ -48,6 +47,6 @@ def import_OE_data(directory_list):
                 reformatted_date = datetime.strptime(date_only,"%Y-%m-%d").strftime("%y%m%d")
                 list_of_session_IDs.append(reformatted_date+"_"+recording_info.lower())
     
-    continuous_ephys_data_list = np.squeeze(continuous_ephys_data_list) # remove unnecessary extra list dimension and convert to numpy.ndarray
+    continuous_ephys_data_list = np.squeeze(continuous_ephys_data_list).tolist() # remove unnecessary extra list dimension and convert to numpy.ndarray
     ephys_data_dict = dict(zip(list_of_session_IDs,continuous_ephys_data_list))
     return ephys_data_dict

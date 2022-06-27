@@ -59,7 +59,7 @@ def full(
 
     # create time axes
     time_axis_for_ephys = np.arange(round(len(chosen_ephys_data_continuous_obj.samples)*time_slice))/chosen_ephys_data_continuous_obj.metadata['sample_rate']
-    start_video_capture_idx = find_peaks(chosen_ephys_data_continuous_obj.samples[:,-1],height=4000)[0][0] # find the beginning camera TTL pulse 
+    start_video_capture_idx = find_peaks(chosen_ephys_data_continuous_obj.samples[:,-1],height=0.3)[0][0] # find the beginning camera TTL pulse 
     time_axis_for_anipose = np.arange(0,20,0.01)+time_axis_for_ephys[start_video_capture_idx]
 
     # identify motion peak locations for foot strike
@@ -247,7 +247,7 @@ def psth(
 
     # create time axes
     time_axis_for_ephys = np.arange(round(len(chosen_ephys_data_continuous_obj.samples)*time_slice))/chosen_ephys_data_continuous_obj.metadata['sample_rate']
-    start_video_capture_idx = find_peaks(chosen_ephys_data_continuous_obj.samples[:,-1],height=4000)[0][0] # find the beginning camera TTL pulse 
+    start_video_capture_idx = find_peaks(chosen_ephys_data_continuous_obj.samples[:,-1],height=0.3)[0][0] # find the beginning camera TTL pulse 
     time_axis_for_anipose = np.arange(0,20,0.01)+time_axis_for_ephys[start_video_capture_idx]
 
     # identify motion peak locations for foot strike

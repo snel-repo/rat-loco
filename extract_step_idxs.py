@@ -1,9 +1,6 @@
-import time
 import pandas as pd
 import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
-# import multiprocessing
-# from functools import partial
 
 def butter_highpass(cutoff, fs, order=2):
     nyq = 0.5 * fs
@@ -18,13 +15,9 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 
 # function receives output of import_ephys_data.py as import_anipose_data.py to plot aligned data
 def extract_step_idxs(
-    anipose_data_dict,
-    bodypart_for_tracking=['palm_L_y'],
-    session_date=str(time.strftime("%y%m%d")),
-    rat_name='dogerat',
-    treadmill_speed=20,
-    treadmill_incline=0,
-    camera_fps=100
+    anipose_data_dict, bodypart_for_tracking,
+    session_date, rat_name, treadmill_speed, treadmill_incline,
+    camera_fps, alignto
     ):
 
     # format inputs to avoid ambiguities
@@ -33,12 +26,22 @@ def extract_step_idxs(
     treadmill_incline = str(treadmill_incline).zfill(2)
 
     # filter anipose dictionaries for the proper session date, speed, and incline
-    anipose_data_dict_filtered_by_date = dict(filter(lambda item: str(session_date) in item[0], anipose_data_dict.items()))
-    anipose_data_dict_filtered_by_ratname = dict(filter(lambda item: rat_name in item[0], anipose_data_dict_filtered_by_date.items()))
-    anipose_data_dict_filtered_by_speed = dict(filter(lambda item: "speed"+treadmill_speed in item[0], anipose_data_dict_filtered_by_ratname.items()))
-    anipose_data_dict_filtered_by_incline = dict(filter(lambda item: "incline"+treadmill_incline in item[0], anipose_data_dict_filtered_by_speed.items()))
+    anipose_data_dict_filtered_by_date = dict(filter(lambda item:
+        str(session_date) in item[0], anipose_data_dict.items()
+        ))
+    anipose_data_dict_filtered_by_ratname = dict(filter(lambda item:
+        rat_name in item[0], anipose_data_dict_filtered_by_date.items()
+        ))
+    anipose_data_dict_filtered_by_speed = dict(filter(lambda item:
+        "speed"+treadmill_speed in item[0], anipose_data_dict_filtered_by_ratname.items()
+        ))
+    anipose_data_dict_filtered_by_incline = dict(filter(lambda item:
+        "incline"+treadmill_incline in item[0], anipose_data_dict_filtered_by_speed.items()
+        ))
     chosen_anipose_data_dict = anipose_data_dict_filtered_by_incline
-    chosen_anipose_df = chosen_anipose_data_dict[f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"]
+    chosen_anipose_df = chosen_anipose_data_dict[
+        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+        ]
 
     # identify motion peak locations for foot strike
     bodypart_to_filter = bodypart_for_tracking[0]
@@ -61,7 +64,7 @@ def extract_step_idxs(
         )
 
     foot_off_idxs, _ = find_peaks(
-        -filtered_signal,
+        -filtered_signal, # invert signal to find the troughs
         height=[0,None],
         threshold=None,
         distance=20,
@@ -70,10 +73,18 @@ def extract_step_idxs(
         wlen=None,
         )
 
+    if alignto == 'foot strike':
+        step_idxs = foot_strike_idxs
+    elif alignto == 'foot off':
+        step_idxs = foot_off_idxs
+
     from IPython.display import display
     # print(foot_strike_idxs - foot_off_idxs)
-    df_fs_minus_fo = pd.DataFrame(foot_off_idxs[1:] - foot_off_idxs[:-1])
-    print("Inter-step timing statistics:\n")
+    df_fs_minus_fo = pd.DataFrame(step_idxs[1:] - step_idxs[:-1])
+    print(
+            f"Inter-step timing statistics for {alignto}:\n\
+            File: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+        )
     step_stats = df_fs_minus_fo.describe()[0]
     display(step_stats)
 

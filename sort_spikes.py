@@ -50,7 +50,8 @@ def sort_spikes(
     rat_name = str(rat_name).lower()
     treadmill_speed = str(treadmill_speed).zfill(2)
     treadmill_incline = str(treadmill_incline).zfill(2)
-
+    session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
     # filter Open Ephys dictionaries for the proper session date, speed, and incline
     ephys_data_dict_filtered_by_date = dict(filter(lambda item:
                                 str(session_date) in item[0], ephys_data_dict.items()
@@ -68,9 +69,7 @@ def sort_spikes(
                                 ))
     chosen_ephys_data_dict = ephys_data_dict_filtered_by_incline
     # convert chosen ephys dict into DataFrame
-    chosen_ephys_data_continuous_obj = chosen_ephys_data_dict[
-        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
-        ]
+    chosen_ephys_data_continuous_obj = chosen_ephys_data_dict[session_parameters]
 
     # filter anipose dictionaries for the proper session date, speed, and incline
     anipose_data_dict_filtered_by_date = dict(filter(lambda item:
@@ -87,9 +86,7 @@ def sort_spikes(
                                 ))
     chosen_anipose_data_dict = anipose_data_dict_filtered_by_incline
     # convert chosen anipose dict into DataFrame
-    chosen_anipose_df = chosen_anipose_data_dict[
-        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
-        ]
+    chosen_anipose_df = chosen_anipose_data_dict[session_parameters]
 
     # create time axes
     ephys_sample_rate = chosen_ephys_data_continuous_obj.metadata['sample_rate']
@@ -173,7 +170,8 @@ def sort_spikes(
     row_spec_list = number_of_rows*[[None]]
     row_spec_list[0] = [{'rowspan': len(bodyparts_list)}]
     row_spec_list[len(bodyparts_list)] = [{'rowspan': len(ephys_channel_idxs_list)}]
-    row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = [{'rowspan': number_of_channels//2+1}]
+    row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
+        [{'rowspan': number_of_channels//2+1}]
 
     fig = make_subplots(
         rows=number_of_rows, cols=1,
@@ -318,7 +316,7 @@ def sort_spikes(
 
     return (
         MU_spikes_by_channel_dict, time_axis_for_ephys, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_idx, figs
+        ephys_sample_rate, start_video_capture_idx, session_parameters, figs
         )
 
 def bin_spikes(
@@ -329,10 +327,11 @@ def bin_spikes(
     do_plot, plot_template, MU_colors, CH_colors
     ):
     
-    assert len(ephys_channel_idxs_list)==1, "ephys_channel_idxs_list should only be 1 channel, idiot! :)"
+    assert len(ephys_channel_idxs_list)==1, \
+    "ephys_channel_idxs_list should only be 1 channel, idiot! :)"
     
     (MU_spikes_by_channel_dict, _, time_axis_for_anipose,
-    ephys_sample_rate, start_video_capture_idx, _) = sort_spikes(
+    ephys_sample_rate, start_video_capture_idx, session_parameters, _) = sort_spikes(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, anipose_data_dict, bodyparts_list=bodypart_for_tracking,
         bodypart_for_tracking=bodypart_for_tracking,
@@ -432,8 +431,8 @@ def bin_spikes(
         rows=1, cols=2,
         shared_xaxes=False,
         subplot_titles=(
-        f"Session Info: {list(anipose_data_dict.keys())[0]}",
-        f"Session Info: {list(ephys_data_dict.keys())[0]}"
+        f"Session Info: {session_parameters}",
+        f"Session Info: {session_parameters}"
         ))
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()):
         MU_step_aligned_idxs = np.concatenate(
@@ -496,12 +495,14 @@ def bin_spikes(
     y=MU_spikes_count_across_steps,
     marker_color=[MU_colors[iColor] for iColor in range(0,len(MU_colors),color_stride)],
     opacity=1,
-    name="Counts Bar Plot"
+    showlegend=False
+    # name="Counts Bar Plot"
     ))
     # set all titles
     fig2.update_layout(
         title_text=
-        f'<b>Total Motor Unit Threshold Crossings Across {number_of_steps} Steps</b>',
+        f'<b>Total Motor Unit Threshold Crossings Across {number_of_steps} Steps</b>\
+        <br><sup>Session Info: {session_parameters}</sup>',
         # xaxis_title_text='<b>Motor Unit Voltage Thresholds</b>',
         yaxis_title_text='<b>Spike Count</b>',
         # bargap=0., # gap between bars of adjacent location coordinates

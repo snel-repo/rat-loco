@@ -1,3 +1,4 @@
+from turtle import showturtle
 import import_OE_data, import_anipose_data, sort_spikes #, plot_loco_ephys
 import plotly.io as pio
 import colorlover as cl
@@ -40,7 +41,7 @@ bin_width_ms=10
 alignto='foot off'
 
 ### Plotting Parameters
-plot_type = "multi_bin"
+plot_type = "multi_count"
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
@@ -72,7 +73,7 @@ MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # 
 if plot_type == "sort":(
         MU_spikes_by_channel_dict,
         time_axis_for_ephys, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_idx, figs
+        ephys_sample_rate, start_video_capture_idx, session_parameters, figs
         ) = sort_spikes.sort_spikes(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, anipose_data_dict, bodyparts_list, bodypart_for_tracking,
@@ -95,12 +96,12 @@ elif plot_type == "bin":(
 elif plot_type == "multi_bin":
     from plotly.offline import iplot
     from plotly.subplots import make_subplots
-
-    big_fig = make_subplots(rows=3,cols=2,shared_xaxes='columns',shared_yaxes=True,
+    num_sessions = len(session_date)
+    big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes='columns',shared_yaxes=True,
                             horizontal_spacing=0.1, vertical_spacing=0.1,
                             subplot_titles=tuple(6*['tmp_title'])
                             )
-    for iRec in range(3):
+    for iRec in range(num_sessions):
         (MU_step_aligned_spike_idxs_dict,
         MU_step_aligned_spike_counts_dict,
         MU_step_2π_warped_spike_idxs_dict,
@@ -116,9 +117,8 @@ elif plot_type == "multi_bin":
             big_fig.add_trace(figs[0].data[iHist], row=iRec+1,
                 col=(iHist//len(MU_spike_amplitudes_list))+1)
         # keep track of session recording parameters, and set those for subplot titles
-        # import pdb; pdb.set_trace()
         big_fig.layout.annotations[2*iRec].update(text=figs[0].layout.annotations[0].text)
-        big_fig.layout.annotations[2*iRec-1].update(text=figs[0].layout.annotations[1].text)
+        big_fig.layout.annotations[2*iRec+1].update(text=figs[0].layout.annotations[1].text)
         # set y-axis titles to those received from bin_spikes()
         big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,
                                 row = iRec+1, col = 1)
@@ -132,6 +132,40 @@ elif plot_type == "multi_bin":
     big_fig.update_traces(opacity=0.75)
     # set bars to overlap and all titles, and use received title from bin_spikes()
     big_fig.update_layout(barmode='overlay',title_text=figs[0].layout.title.text)
+    
+    iplot(big_fig)
+elif plot_type == "multi_count":
+    from plotly.offline import iplot
+    from plotly.subplots import make_subplots
+    num_sessions = len(session_date)
+    big_fig = make_subplots(rows=1,cols=num_sessions,shared_xaxes=True,shared_yaxes=True,
+                            horizontal_spacing=0.1, vertical_spacing=0.1,
+                            subplot_titles=tuple(num_sessions*['tmp_title'])
+                            )
+    for iRec in range(num_sessions):
+        (MU_step_aligned_spike_idxs_dict,
+        MU_step_aligned_spike_counts_dict,
+        MU_step_2π_warped_spike_idxs_dict,
+        step_idxs_in_ephys_time, figs
+        ) = sort_spikes.bin_spikes(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+        session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
+        camera_fps, alignto, vid_length, time_slice,
+        do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
+        )
+        for iHist in range(len(figs[1].data)):
+            big_fig.add_trace(figs[1].data[iHist], row=1, col=iRec+1)
+        # keep track of session recording parameters, and set those for subplot titles
+        big_fig.layout.annotations[iRec].update(text=figs[1].layout.title.text)
+        # set y-axis titles to those received from bin_spikes()
+        big_fig.update_yaxes(title_text=figs[1].layout.yaxis.title.text, row = 1, col = iRec+1)
+        # set x-axis titles to those received from bin_spikes()
+        big_fig.update_xaxes(title_text=figs[1].layout.xaxis.title.text,row = 1, col = iRec+1)
+    # lock y-axes together
+    big_fig.update_yaxes(matches='y')
+    # Reduce opacity to see both histograms
+    big_fig.update_traces(opacity=0.75,showlegend=False)
     
     iplot(big_fig)
 else:

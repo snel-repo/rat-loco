@@ -1,5 +1,4 @@
-from turtle import showturtle
-import import_OE_data, import_anipose_data, sort_spikes #, plot_loco_ephys
+import import_OE_data, import_anipose_data, process_spikes #, plot_loco_ephys
 import plotly.io as pio
 import colorlover as cl
 # import plotly.colors
@@ -33,15 +32,15 @@ bodypart_for_tracking = ['palm_L_y']
 session_date=3*[220603]
 rat_name=3*['dogerat']
 treadmill_speed=3*[20]
-treadmill_incline=[0,5,10]
+treadmill_incline=[10,5,0]
 camera_fps=100
 vid_length=20
 time_slice=1
-bin_width_ms=10
+bin_width_ms=40
 alignto='foot off'
 
 ### Plotting Parameters
-plot_type = "multi_count"
+plot_type = "smooth"
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
@@ -70,49 +69,41 @@ MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # 
 # MU_colors_deque.rotate(color_list_len//2)
 # MU_colors = list(MU_colors_deque)
 
-if plot_type == "sort":(
-        MU_spikes_by_channel_dict,
-        time_axis_for_ephys, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_idx, session_parameters, figs
-        ) = sort_spikes.sort_spikes(
+if plot_type == "sort":
+    process_spikes.sort(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, anipose_data_dict, bodyparts_list, bodypart_for_tracking,
-        session_date, rat_name, treadmill_speed, treadmill_incline,
+        session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
         camera_fps, alignto, vid_length, time_slice,
-        do_plot, plot_template, MU_colors, CH_colors
-        )
-elif plot_type == "bin":(
-        MU_step_aligned_spike_idxs_dict,
-        MU_step_aligned_spike_counts_dict,
-        MU_step_2π_warped_spike_idxs_dict,
-        step_idxs_in_ephys_time, figs
-        ) = sort_spikes.bin_spikes(
+        do_plot, plot_template, MU_colors, CH_colors)
+elif plot_type == "bin":
+    process_spikes.bin_and_count(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
-        session_date, rat_name, treadmill_speed, treadmill_incline,
+        session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
         camera_fps, alignto, vid_length, time_slice,
-        do_plot, plot_template, MU_colors, CH_colors
-        )
+        do_plot, plot_template, MU_colors, CH_colors)
+elif plot_type == "smooth":
+    process_spikes.smooth(
+    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+    session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+    camera_fps, alignto, vid_length, time_slice,
+    do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "multi_bin":
     from plotly.offline import iplot
     from plotly.subplots import make_subplots
     num_sessions = len(session_date)
     big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes='columns',shared_yaxes=True,
                             horizontal_spacing=0.1, vertical_spacing=0.1,
-                            subplot_titles=tuple(6*['tmp_title'])
-                            )
+                            subplot_titles=tuple(6*['tmp_title']))
     for iRec in range(num_sessions):
-        (MU_step_aligned_spike_idxs_dict,
-        MU_step_aligned_spike_counts_dict,
-        MU_step_2π_warped_spike_idxs_dict,
-        step_idxs_in_ephys_time, figs
-        ) = sort_spikes.bin_spikes(
-        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
-        session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
-        camera_fps, alignto, vid_length, time_slice,
-        do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
-        )
+        (_,_,_,_,_,_,_,_,figs) = process_spikes.bin_and_count(
+            ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+            filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+            session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
+            camera_fps, alignto, vid_length, time_slice,
+            do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
         for iHist in range(len(figs[0].data)):
             big_fig.add_trace(figs[0].data[iHist], row=iRec+1,
                 col=(iHist//len(MU_spike_amplitudes_list))+1)
@@ -140,20 +131,14 @@ elif plot_type == "multi_count":
     num_sessions = len(session_date)
     big_fig = make_subplots(rows=1,cols=num_sessions,shared_xaxes=True,shared_yaxes=True,
                             horizontal_spacing=0.1, vertical_spacing=0.1,
-                            subplot_titles=tuple(num_sessions*['tmp_title'])
-                            )
+                            subplot_titles=tuple(num_sessions*['tmp_title']))
     for iRec in range(num_sessions):
-        (MU_step_aligned_spike_idxs_dict,
-        MU_step_aligned_spike_counts_dict,
-        MU_step_2π_warped_spike_idxs_dict,
-        step_idxs_in_ephys_time, figs
-        ) = sort_spikes.bin_spikes(
+        (_,_,_,_,_,_,_,_,figs) = process_spikes.bin_and_count(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
         session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
         camera_fps, alignto, vid_length, time_slice,
-        do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
-        )
+        do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
         for iHist in range(len(figs[1].data)):
             big_fig.add_trace(figs[1].data[iHist], row=1, col=iRec+1)
         # keep track of session recording parameters, and set those for subplot titles

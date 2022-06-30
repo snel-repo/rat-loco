@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
 
 def butter_highpass(cutoff, fs, order=2):

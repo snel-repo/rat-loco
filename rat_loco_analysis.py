@@ -1,60 +1,143 @@
 import import_OE_data, import_anipose_data, sort_spikes #, plot_loco_ephys
-import plotly.colors
 import plotly.io as pio
+import colorlover as cl
+# import plotly.colors
 
 ### Chosen Directories
 # ephys directory(ies) that should have 'Record Node ###' inside it
 ephys_directory_list = [
     '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-03_19-41-47',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-21-22',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-45-13',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_16-01-57',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-08_14-14-30',
+    '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-21-22',
+    '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-45-13',
+    '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_16-01-57',
+    '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-08_14-14-30',
     ]
 
 # anipose directory(ies) that should have pose_3d.csv inside it
 anipose_directory_list = [
     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220603',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220606',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220608']
+    '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220606',
+    '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220608'
     ]
 
 ephys_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
 anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_list)
 
 ### Analysis parameters
+MU_spike_amplitudes_list = [[150,500],[500.0001,1700],[1700.0001,5000]]
+ephys_channel_idxs_list = [7] #[0,1,2,4,5,7,8,9,11,13,15,16]
+filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 bodyparts_list=['palm_L_y']#['palm_L_x','palm_L_y','palm_L_z']
 bodypart_for_tracking = ['palm_L_y']
-session_date=220603
-rat_name='dogerat'
-treadmill_speed=20
-treadmill_incline=10
+session_date=3*[220603]
+rat_name=3*['dogerat']
+treadmill_speed=3*[20]
+treadmill_incline=[0,5,10]
 camera_fps=100
 vid_length=20
 time_slice=1
-ephys_channel_idxs_list = [7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 bin_width_ms=10
 alignto='foot off'
 
 ### Plotting Parameters
-plot_type = "sort"
+plot_type = "multi_bin"
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
 plot_template = pio.templates.default = 'plotly'
 
-### Define a sequential color list for plot consistency
-# plot_colors = plotly.colors.sequential.Rainbow_r
-# plot_colors = plotly.colors.cyclical.HSV_r
-# plot_colors = plotly.colors.diverging.Portland_r
-plot_colors = [
-    'blue', 'green', 'orange', 
-    'royalblue','forestgreen','firebrick',
-    'lawngreen', 'greenyellow', 'red',
-    'darkturquoise','purple','black',
-    'lightblue','lightgreen','hotpink',
-    ]
-# plot_colors = [
+### Define sequential color lists for plot consistency
+N_colors = 6
+# CH_colors = cl.to_rgb(cl.interp(plotly.colors.sequential.Jet,16))
+CH_colors = cl.to_rgb(cl.interp(cl.scales['9']['seq']['Greys'],N_colors*2))[-1:-N_colors:-1] # black to grey, 16
+MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # rainbow scale, 32
+# MU_colors = plotly.colors.sequential.Rainbow_r
+# MU_colors = plotly.colors.cyclical.HSV_r
+# MU_colors = plotly.colors.diverging.Portland_r
+# MU_colors = [
+#     'blue', 'green', 'orange', 
+#     'royalblue','forestgreen','firebrick',
+#     'lawngreen', 'greenyellow', 'red',
+#     'darkturquoise','purple','black',
+#     'lightblue','lightgreen','hotpink',
+#     ]
+
+## rotate colors, if needed
+# from collections import deque
+# color_list_len = len(MU_colors)
+# MU_colors_deque = deque(MU_colors)
+# MU_colors_deque.rotate(color_list_len//2)
+# MU_colors = list(MU_colors_deque)
+
+if plot_type == "sort":(
+        MU_spikes_by_channel_dict,
+        time_axis_for_ephys, time_axis_for_anipose,
+        ephys_sample_rate, start_video_capture_idx, figs
+        ) = sort_spikes.sort_spikes(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, anipose_data_dict, bodyparts_list, bodypart_for_tracking,
+        session_date, rat_name, treadmill_speed, treadmill_incline,
+        camera_fps, alignto, vid_length, time_slice,
+        do_plot, plot_template, MU_colors, CH_colors
+        )
+elif plot_type == "bin":(
+        MU_step_aligned_spike_idxs_dict,
+        MU_step_aligned_spike_counts_dict,
+        MU_step_2π_warped_spike_idxs_dict,
+        step_idxs_in_ephys_time, figs
+        ) = sort_spikes.bin_spikes(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+        session_date, rat_name, treadmill_speed, treadmill_incline,
+        camera_fps, alignto, vid_length, time_slice,
+        do_plot, plot_template, MU_colors, CH_colors
+        )
+elif plot_type == "multi_bin":
+    from plotly.offline import iplot
+    from plotly.subplots import make_subplots
+
+    big_fig = make_subplots(rows=3,cols=2,shared_xaxes='columns',shared_yaxes=True,
+                            horizontal_spacing=0.1, vertical_spacing=0.1,
+                            subplot_titles=tuple(6*['tmp_title'])
+                            )
+    for iRec in range(3):
+        (MU_step_aligned_spike_idxs_dict,
+        MU_step_aligned_spike_counts_dict,
+        MU_step_2π_warped_spike_idxs_dict,
+        step_idxs_in_ephys_time, figs
+        ) = sort_spikes.bin_spikes(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+        session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
+        camera_fps, alignto, vid_length, time_slice,
+        do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
+        )
+        for iHist in range(len(figs[0].data)):
+            big_fig.add_trace(figs[0].data[iHist], row=iRec+1,
+                col=(iHist//len(MU_spike_amplitudes_list))+1)
+        # keep track of session recording parameters, and set those for subplot titles
+        # import pdb; pdb.set_trace()
+        big_fig.layout.annotations[2*iRec].update(text=figs[0].layout.annotations[0].text)
+        big_fig.layout.annotations[2*iRec-1].update(text=figs[0].layout.annotations[1].text)
+        # set y-axis titles to those received from bin_spikes()
+        big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,
+                                row = iRec+1, col = 1)
+        big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,
+                                row = iRec+1, col = 2)
+    # set x-axis titles to those received from bin_spikes()
+    big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text,row = iRec+1, col = 1)
+    big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text,row = iRec+1, col = 2)
+    big_fig.update_yaxes(matches='y')
+    # Reduce opacity to see both histograms
+    big_fig.update_traces(opacity=0.75)
+    # set bars to overlap and all titles, and use received title from bin_spikes()
+    big_fig.update_layout(barmode='overlay',title_text=figs[0].layout.title.text)
+    
+    iplot(big_fig)
+else:
+    raise Exception(f'Plot type "{plot_type}" not found.')
+
+# plotly_named_colors = [
 #     "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
 #     "beige", "bisque", "black", "blanchedalmond", "blue",
 #     "blueviolet", "brown", "burlywood", "cadetblue",
@@ -91,33 +174,3 @@ plot_colors = [
 #     "turquoise", "violet", "wheat", "white", "whitesmoke",
 #     "yellow", "yellowgreen"
 #     ]
-
-## rotate colors, if needed
-# from collections import deque
-# color_list_len = len(plot_colors)
-# plot_colors_deque = deque(plot_colors)
-# plot_colors_deque.rotate(color_list_len//2)
-# plot_colors = list(plot_colors_deque)
-
-plot_colors = 10*plot_colors # ensure colors will not run out
-
-
-if plot_type == "sort":
-    sort_spikes.sort_spikes(
-        ephys_data_dict, ephys_channel_idxs_list ,
-        anipose_data_dict, bodyparts_list, bodypart_for_tracking,
-        session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, alignto, vid_length, time_slice,
-        do_plot, plot_template, plot_colors
-        )
-elif plot_type == "bin":
-    sort_spikes.bin_spikes(
-        ephys_data_dict, ephys_channel_idxs_list, bin_width_ms, 
-        anipose_data_dict, bodypart_for_tracking,
-        session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, alignto, vid_length, time_slice,
-        do_plot, plot_template, plot_colors
-        )
-else:
-    raise Exception(f'Plot type "{plot_type}" not found.')
-

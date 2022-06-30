@@ -78,7 +78,6 @@ def extract_step_idxs(
     elif alignto == 'foot off':
         step_idxs = foot_off_idxs
 
-    from IPython.display import display
     # print(foot_strike_idxs - foot_off_idxs)
     df_fs_minus_fo = pd.DataFrame(step_idxs[1:] - step_idxs[:-1])
     print(
@@ -86,6 +85,8 @@ def extract_step_idxs(
             File: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
         )
     step_stats = df_fs_minus_fo.describe()[0]
+    
+    from IPython.display import display
     display(step_stats)
 
     return foot_strike_idxs, foot_off_idxs, step_stats

@@ -2,6 +2,7 @@ import import_OE_data, import_anipose_data, process_spikes #, plot_loco_ephys
 import plotly.io as pio
 import colorlover as cl
 from numpy import pi
+from pdb import set_trace
 # import plotly.colors
 
 ### Chosen Directories
@@ -33,18 +34,19 @@ bodypart_for_tracking = ['palm_L_y']
 session_date=3*[220603]
 rat_name=3*['dogerat']
 treadmill_speed=3*[20]
-treadmill_incline=[10,5,0]
+treadmill_incline=[10]
 camera_fps=100
 vid_length=20
 time_slice=1
 bin_width_ms=1
 bin_width_radian=(2*pi)/500 # leave 2*pi numerator and set denominator as number of bins
-smoothing_window = [10, 20, 40] # bins
-phase_align=False # True/False
+smoothing_window = [20] # bins
+phase_align=True # True/False
 alignto='foot off'
 
 ### Plotting Parameters
-plot_type = "multi_smooth"
+plot_type = "state"
+plot_units = [0,1,2]
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
@@ -61,7 +63,6 @@ MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # 
 # MU_colors = cl.to_rgb(cl.scales['9']['div']['RdYlGn'])
 # MU_colors = plotly.colors.cyclical.HSV
 # MU_colors.reverse()
-# import pdb; pdb.set_trace()
 # MU_colors = plotly.colors.sequential.Rainbow_r
 # MU_colors = plotly.colors.cyclical.HSV_r
 # MU_colors = plotly.colors.diverging.Portland_r
@@ -102,6 +103,13 @@ elif plot_type == "smooth":
     session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
     camera_fps, alignto, vid_length, time_slice,
     do_plot, phase_align, plot_template, MU_colors, CH_colors)
+elif plot_type == "state":
+    process_spikes.state(
+    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict, bodypart_for_tracking,
+    session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+    camera_fps, alignto, vid_length, time_slice,
+    do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors)
 elif plot_type == "multi_bin":
     from plotly.offline import iplot
     from plotly.subplots import make_subplots
@@ -171,9 +179,9 @@ elif plot_type == "multi_smooth":
     num_smooth_windows = len(smoothing_window)
     big_fig = make_subplots(rows=num_smooth_windows,cols=1,shared_xaxes='columns',shared_yaxes=False,
                             horizontal_spacing=0.1, vertical_spacing=0.1,
-                            subplot_titles=tuple(3*['tmp_title']))
+                            subplot_titles=tuple(num_smooth_windows*['tmp_title']))
     for iSmooth in range(num_smooth_windows):
-        figs = process_spikes.smooth(
+        _, figs = process_spikes.smooth(
             ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
             filter_ephys, bin_width_ms, bin_width_radian, smoothing_window[iSmooth], anipose_data_dict, bodypart_for_tracking,
             session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],

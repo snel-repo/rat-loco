@@ -1,4 +1,3 @@
-import pdb
 from extract_step_idxs import extract_step_idxs
 import pandas as pd
 import numpy as np
@@ -7,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
+from pdb import set_trace
 # from scipy.stats import binned_statistic
 # from sklearn.decomposition import PCA
 
@@ -640,7 +640,7 @@ def smooth(
                 opacity=.5,
                 line=dict(width=8,color=MU_colors[iUnit],dash='solid')
                 ))
-    # plot average traces for each unit
+    # plot mean traces for each unit
     for iUnit in range(number_of_units):
             fig.add_trace(go.Scatter(
                 x=np.arange(MU_smoothed_spikes_3d_array.shape[1]) if not phase_align 
@@ -652,7 +652,7 @@ def smooth(
                 # dash styles: ['solid', 'dot', 'dash', 'longdash', 'dashdot', 'longdashdot']
                 line=dict(width=4,color=CH_colors[iUnit],dash='dot')
                 ))
-    # pdb.set_trace()
+    
     fig.update_layout(
         title_text=
         f'<b>{title_prefix}Aligned MU Activity for All {number_of_steps} Steps</b>\
@@ -670,7 +670,7 @@ def smooth(
     # put in a list for compatibility with calling functions
     figs = [fig]
     
-    return figs
+    return MU_smoothed_spikes_3d_array, figs
             # df_cols_list.append(f'step{iStep}_unit{iUnit}')
     # transpose 3d array to allow flattening pages of the 3d data into Steps x (Bins*Units)
     # MU_smoothed_spikes_3d_array_T = MU_smoothed_spikes_3d_array.T(1,2,0)
@@ -681,4 +681,121 @@ def smooth(
     #     columns=df_cols_list
     #     )
     # px.plot(smoothed_MU_df,x="bins",y="")
-        
+    
+def state(
+    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict, bodypart_for_tracking,
+    session_date, rat_name, treadmill_speed, treadmill_incline,
+    camera_fps, alignto, vid_length, time_slice,
+    do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors
+    ):
+    
+    (MU_smoothed_spikes_3d_array, figs
+    ) = smooth(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+        bodypart_for_tracking, session_date, rat_name, treadmill_speed, treadmill_incline,
+        camera_fps, alignto, vid_length, time_slice, do_plot=False, phase_align=phase_align,
+        plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
+    
+    session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # select units for plotting
+    sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
+    
+    # set numbers of things from input matrix dimensionality
+    number_of_steps = sliced_MU_smoothed_3d_array.shape[0]
+    number_of_bins = sliced_MU_smoothed_3d_array.shape[1]
+    # detect number of identified units
+    number_of_units = sliced_MU_smoothed_3d_array.any(1).any(0).sum()
+    
+    if phase_align is True:
+        bin_width = bin_width_radian
+        bin_unit = ' radians'
+        title_prefix = 'Phase-'
+    else:
+        bin_width = bin_width_ms
+        bin_unit = 'ms'
+        title_prefix = 'Time-'
+    
+    fig = go.Figure()
+    # smooth and plot each trace
+    for iStep in range(number_of_steps):
+        # gaussian smooth across time, with standard deviation value of bin_width_ms
+        sliced_MU_smoothed_3d_array[iStep,:,:] = gaussian_filter1d(
+            sliced_MU_smoothed_3d_array[iStep,:,:],
+            sigma=smoothing_window,
+            axis=0, order=0, output=None, mode='constant',
+            cval=0.0, truncate=4.0)
+        if number_of_units==2:
+            fig.add_trace(go.Scatter(
+                x=sliced_MU_smoothed_3d_array[iStep,:,0],
+                y=sliced_MU_smoothed_3d_array[iStep,:,1],
+                name=f'step{iStep}',
+                mode='lines',
+                opacity=.5,
+                line=dict(width=5,color=MU_colors[treadmill_incline//5],dash='solid')
+                ))
+        elif number_of_units==3:
+            fig.add_trace(go.Scatter3d(
+                x=sliced_MU_smoothed_3d_array[iStep,:,0],
+                y=sliced_MU_smoothed_3d_array[iStep,:,1],
+                z=sliced_MU_smoothed_3d_array[iStep,:,2],
+                name=f'step{iStep}',
+                mode='lines',
+                opacity=.5,
+                line=dict(width=8,color=MU_colors[treadmill_incline//5],dash='solid')
+                ))
+    # plot mean traces for each unit
+    if number_of_units==2:
+            fig.add_trace(go.Scatter(
+                x=sliced_MU_smoothed_3d_array[:,:,0].mean(0),
+                y=sliced_MU_smoothed_3d_array[:,:,1].mean(0),
+                name=f'mean',
+                mode='markers',
+                opacity=1,
+                line=dict(width=10,color=CH_colors[0],dash='solid'),
+                marker=dict(size=8,color=CH_colors[0])
+                ))
+    elif number_of_units==3:
+            fig.add_trace(go.Scatter3d(
+                x=sliced_MU_smoothed_3d_array[:,:,0].mean(0),
+                y=sliced_MU_smoothed_3d_array[:,:,1].mean(0),
+                z=sliced_MU_smoothed_3d_array[:,:,2].mean(0),
+                name=f'mean',
+                mode='markers',
+                opacity=1,
+                line=dict(width=10,color=CH_colors[0],dash='solid'),
+                marker=dict(size=3,color=CH_colors[0])
+                ))
+    if number_of_units==2:
+        fig.update_layout(
+            title_text=
+            f'<b>{title_prefix}MU State Space Activity for All {number_of_steps} Steps</b>\
+            <br><sup>Session Info: {session_parameters}, Bin Width: {np.round(bin_width,4)}{bin_unit}, Smoothed by {smoothing_window} bin window</sup>',
+            xaxis_title_text=f'<b>Unit {plot_units[0]}</b>',
+            yaxis_title_text=f'<b>Unit {plot_units[1]}</b>'
+            )
+    elif number_of_units==3:
+        fig.update_layout(
+            title_text=
+            f'<b>{title_prefix}MU State Space Activity for All {number_of_steps} Steps</b>\
+            <br><sup>Session Info: {session_parameters}, Bin Width: {bin_width}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
+        fig.update_scenes(
+            dict(camera=dict(eye=dict(x=-0.3, y=-2, z=0.2)), #the default values are 1.25, 1.25, 1.25
+                xaxis = dict(title_text=f'<b>Unit {plot_units[0]}</b>'),
+                yaxis = dict(title_text=f'<b>Unit {plot_units[1]}</b>'),
+                zaxis = dict(title_text=f'<b>Unit {plot_units[2]}</b>'),
+                aspectmode='manual', #this string can be 'data', 'cube', 'auto', 'manual'
+                # custom aspectratio is defined as follows:
+                aspectratio=dict(x=1, y=1, z=1)
+           ))
+    # set theme to chosen template
+    # fig.update_layout(template=plot_template)
+    
+    if do_plot:
+        iplot(fig)
+    
+    # put in a list for compatibility with calling functions
+    figs = [fig]
+    return figs

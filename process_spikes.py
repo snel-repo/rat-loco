@@ -2,7 +2,6 @@ import pdb
 from extract_step_idxs import extract_step_idxs
 import pandas as pd
 import numpy as np
-import plotly.express as px
 from plotly.offline import iplot
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -325,14 +324,16 @@ def sort(
 
 def bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+    filter_ephys, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_slice,
     do_plot, plot_template, MU_colors, CH_colors
     ):
     
+    # check inputs for problems
     assert len(ephys_channel_idxs_list)==1, \
     "ephys_channel_idxs_list should only be 1 channel, idiot! :)"
+    assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
     
     (MU_spikes_by_channel_dict, _, time_axis_for_anipose,
     ephys_sample_rate, start_video_capture_idx, session_parameters, _) = sort(
@@ -364,6 +365,8 @@ def bin_and_count(
         int(step_stats['max']*step_to_ephys_conversion_ratio),
         len(MU_spikes_dict),
         ))
+    MU_spikes_3d_array_ephys_2π = MU_spikes_3d_array_ephys_time.copy()
+    
     # initialize dict to store stepwise counts
     MU_step_aligned_spike_counts_dict = {key: None for key in MU_spikes_dict.keys()}
     # initialize dict of lists to store stepwise index arrays
@@ -379,10 +382,12 @@ def bin_and_count(
         step_idxs_in_ephys_time = foot_strike_idxs_in_ephys_time
     elif alignto == 'foot off':
         step_idxs_in_ephys_time = foot_off_idxs_in_ephys_time
+    phase_warp_2π_coeff_list = []
     # fill 3d numpy array with Steps x Time x Units data, and a list of aligned idxs
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()): # for each unit
         MU_spikes_idx_arr = np.array(MU_spikes_dict[iUnitKey])
-        this_step_idx = 0; next_step_idx = 0;
+        # this_step_idx = 0; next_step_idx = 0;
+        # this_step_2π_idx = 0; next_step_2π_idx = 0;
         for iStep in range(number_of_steps-2): # for each step
             # keep track of index boundaries for each step
             this_step_idx = step_idxs_in_ephys_time[iStep+1].astype(int)
@@ -403,6 +408,7 @@ def bin_and_count(
             if len(MU_spikes_idxs_for_step)!=0:
                 MU_spikes_3d_array_ephys_time[iStep+1, MU_spikes_idxs_for_step, iUnit] = 1
         # create phase aligned step indexes, with max index for each step set to 2π    
+        bin_width_eph_2π = []
         for πStep in range(number_of_steps-2): # for each step
             # keep track of index boundaries for each step
             this_step_2π_idx = step_idxs_in_ephys_time[πStep+1].astype(int)
@@ -414,27 +420,54 @@ def bin_and_count(
                 (MU_spikes_idx_arr < (time_axis_for_anipose.max()*ephys_sample_rate).astype(int)) &
                 (MU_spikes_idx_arr > start_video_capture_idx)
                 )]
-            # subtract current step_2π index to align to each step_2π, and convert to integer index
-            phase_warp_2π_coeff = 2*np.pi/(step_idxs_in_ephys_time[πStep+2]-step_idxs_in_ephys_time[πStep+1])
-            MU_spikes_idxs_for_step = (
+            # coefficient to make step out of 2π radians, step made to be 2π after multiplication
+            phase_warp_2π_coeff = 2*np.pi/(
+                step_idxs_in_ephys_time[πStep+2]-step_idxs_in_ephys_time[πStep+1])
+            phase_warp_2π_coeff_list.append(phase_warp_2π_coeff)
+            # subtract this step start idx, and convert to an integer index
+            MU_spikes_idxs_for_step_aligned = (
                 spike_idxs_in_step_2π_and_video_bounded - this_step_2π_idx).astype(int)
-            MU_spikes_idxs_for_step_2π = MU_spikes_idxs_for_step * phase_warp_2π_coeff
+            MU_spikes_idxs_for_step_2π = MU_spikes_idxs_for_step_aligned * phase_warp_2π_coeff
             # store aligned indexes for each step_2π
             MU_step_2π_warped_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step_2π)
+            # if spikes are present, set them to 1 for this unit during this step
+            if len(MU_spikes_idxs_for_step_2π)!=0:
+                MU_spikes_3d_array_ephys_2π[
+                    πStep+1,
+                    # convert MU_spikes_idxs_for_step_2π back to ephys sample rate-sized indexes
+                    np.round(MU_spikes_idxs_for_step_2π/(
+                        2*np.pi)*MU_spikes_3d_array_ephys_2π.shape[1]).astype(int),
+                    iUnit] = 1
     # bin 3d array to time bins with width: bin_width_ms
     ms_duration = MU_spikes_3d_array_ephys_time.shape[1]/ephys_sample_rate*1000
     # round up number of steps to prevent index overflows
-    number_of_bins_in_step = np.ceil(ms_duration/bin_width_ms).astype(int)
+    number_of_bins_in_time_step = np.ceil(ms_duration/bin_width_ms).astype(int)
     bin_width_eph = int(bin_width_ms*(ephys_sample_rate/1000))
+    
+    # round up number of steps to prevent index overflows
+    number_of_bins_in_2π_step = np.ceil(2*np.pi/bin_width_radian).astype(int)
+    bin_width_eph_2π = np.round(
+        MU_spikes_3d_array_ephys_2π.shape[1]/number_of_bins_in_2π_step).astype(int)
+    
     # create binned 3d array with shape: Steps x Bins x Units
     MU_spikes_3d_array_binned = np.zeros((
         MU_spikes_3d_array_ephys_time.shape[0],
-        number_of_bins_in_step,
+        number_of_bins_in_time_step,
         MU_spikes_3d_array_ephys_time.shape[2]))
-    for iBin in range(number_of_bins_in_step):
+    for iBin in range(number_of_bins_in_time_step):
         # sum across slice of cube bin_width_ms wide
         MU_spikes_3d_array_binned[:,iBin,:] = \
             MU_spikes_3d_array_ephys_time[:,iBin*bin_width_eph:(iBin+1)*bin_width_eph,:].sum(1)
+            
+    MU_spikes_3d_array_binned_2π = np.zeros((
+        MU_spikes_3d_array_ephys_2π.shape[0],
+        number_of_bins_in_2π_step,
+        MU_spikes_3d_array_ephys_2π.shape[2]))
+    for πBin in range(number_of_bins_in_2π_step):
+        # sum across slice of cube bin_width_radian wide
+        MU_spikes_3d_array_binned_2π[:,πBin,:] = \
+            MU_spikes_3d_array_ephys_2π[:,πBin*bin_width_eph_2π:(πBin+1)*bin_width_eph_2π,:].sum(1)
+                
     # get number of channels and units per channel
     # then compute a color stride value to maximize use of color space
     # number_of_channels = len(np.where((np.array(ephys_channel_idxs_list)!=16)
@@ -461,13 +494,12 @@ def bin_and_count(
             marker_color=MU_colors[color_stride*iUnit]),
             row=1, col=1
             )
-    bin_width_2π = 2*np.pi/50 #((step_stats['max']/camera_fps)*1000/bin_width_ms)
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()):
         MU_step_2π_aligned_idxs = np.concatenate(
             MU_step_2π_warped_spike_idxs_dict[iUnitKey]).ravel()            
         fig1.add_trace(go.Histogram(
             x=MU_step_2π_aligned_idxs, # radians
-            xbins=dict(start=0, size=bin_width_2π),
+            xbins=dict(start=0, size=bin_width_radian),
             name=iUnitKey+"uV crossings",
             marker_color=MU_colors[color_stride*iUnit],
             showlegend=False),
@@ -487,7 +519,7 @@ def bin_and_count(
         # bargap=0., # gap between bars of adjacent location coordinates
         # bargroupgap=0.1 # gap between bars of the same location coordinates
         )
-    bin_2π_rnd = np.round(bin_width_2π,3)
+    bin_2π_rnd = np.round(bin_width_radian,4)
     fig1.update_xaxes(title_text='<b>Time During Step (milliseconds)</b>', row = 1, col = 1)
     fig1.update_xaxes(title_text='<b>Phase During Step (radians)</b>', row = 1, col = 2)
     fig1.update_yaxes(title_text=\
@@ -540,16 +572,17 @@ def bin_and_count(
         MU_step_2π_warped_spike_idxs_dict,
         MU_spikes_3d_array_ephys_time,
         MU_spikes_3d_array_binned,
+        MU_spikes_3d_array_binned_2π,
         MU_spikes_count_across_all_steps,
         step_idxs_in_ephys_time, ephys_sample_rate, figs
     )
 
 def smooth(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+    filter_ephys, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict, bodypart_for_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_slice,
-    do_plot, plot_template, MU_colors, CH_colors
+    do_plot, phase_align, plot_template, MU_colors, CH_colors
     ):
     
     (MU_step_aligned_spike_idxs_dict,
@@ -557,11 +590,12 @@ def smooth(
     MU_step_2π_warped_spike_idxs_dict,
     MU_spikes_3d_array_ephys_time,
     MU_spikes_3d_array_binned,
+    MU_spikes_3d_array_binned_2π,
     MU_spikes_count_across_all_steps,
     step_idxs_in_ephys_time, ephys_sample_rate, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, bin_width_ms, anipose_data_dict, bodypart_for_tracking,
+    filter_ephys, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_slice,
     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
@@ -569,41 +603,63 @@ def smooth(
     
     session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     # initialize 3d numpy array with shape: Steps x Bins x Units
-    MU_smoothed_spikes_3d_array = \
-        np.zeros_like(MU_spikes_3d_array_ephys_time)
+    if phase_align is True:
+        binned_spike_array = MU_spikes_3d_array_binned_2π
+        bin_width = bin_width_radian
+        bin_unit = ' radians'
+        title_prefix = 'Phase-'
+    else:
+        binned_spike_array = MU_spikes_3d_array_binned
+        bin_width = bin_width_ms
+        bin_unit = 'ms'
+        title_prefix = 'Time-'
+        
+    MU_smoothed_spikes_3d_array = np.zeros_like(binned_spike_array)
     number_of_steps = MU_smoothed_spikes_3d_array.shape[0]
     number_of_bins = MU_smoothed_spikes_3d_array.shape[1]
     number_of_units = MU_smoothed_spikes_3d_array.shape[2]
-    MU_smoothed_spikes_ztrimmed_array = []
     fig = go.Figure()
-    for iStep in range(number_of_steps):
-        # gaussian smooth across time, with standard deviation value of bin_width_ms
-        MU_smoothed_spikes_3d_array[iStep,:,:] = gaussian_filter1d(
-            MU_spikes_3d_array_ephys_time[iStep,:,:],
-            sigma=int(bin_width_ms*ephys_sample_rate/1000),
-            axis=0, order=0, output=None, mode='constant',
-            cval=0.0, truncate=4.0)
-        for iUnit in range(number_of_units):
+    
+    # smooth and plot each trace
+    for iUnit in range(number_of_units):
+        for iStep in range(number_of_steps):
+            # gaussian smooth across time, with standard deviation value of bin_width_ms
+            MU_smoothed_spikes_3d_array[iStep,:,:] = gaussian_filter1d(
+                binned_spike_array[iStep,:,:],
+                sigma=smoothing_window,
+                axis=0, order=0, output=None, mode='constant',
+                cval=0.0, truncate=4.0)
             MU_smoothed_spikes_ztrimmed_array = np.trim_zeros(
                 MU_smoothed_spikes_3d_array[iStep,:,iUnit], trim='b')
             fig.add_trace(go.Scatter(
-                x=np.arange(len(MU_smoothed_spikes_ztrimmed_array))/(ephys_sample_rate/1000),
+                x=np.arange(len(MU_smoothed_spikes_ztrimmed_array)) if not phase_align 
+                    else np.arange(2*np.pi, number_of_bins),
                 y=MU_smoothed_spikes_ztrimmed_array,
                 name=f'step{iStep}_unit{iUnit}',
                 mode='lines',
-                opacity=.6,
-                line=dict(width=3,color=MU_colors[iUnit]),
-                # row=1, col=1)
-            ))
-        # set all titles
+                opacity=.5,
+                line=dict(width=8,color=MU_colors[iUnit],dash='solid')
+                ))
+    # plot average traces for each unit
+    for iUnit in range(number_of_units):
+            fig.add_trace(go.Scatter(
+                x=np.arange(MU_smoothed_spikes_3d_array.shape[1]) if not phase_align 
+                    else np.arange(2*np.pi, number_of_bins),
+                y=MU_smoothed_spikes_3d_array.mean(axis=0)[:,iUnit],
+                name=f'mean_unit{iUnit}',
+                mode='lines',
+                opacity=1,
+                # dash styles: ['solid', 'dot', 'dash', 'longdash', 'dashdot', 'longdashdot']
+                line=dict(width=4,color=CH_colors[iUnit],dash='dot')
+                ))
     # pdb.set_trace()
     fig.update_layout(
         title_text=
-        f'<b>Smoothed Motor Unit Activity for All {number_of_steps} Steps</b>\
+        f'<b>{title_prefix}Aligned MU Activity for All {number_of_steps} Steps</b>\
         <br><sup>Session Info: {session_parameters}</sup>',
-        xaxis_title_text=f'<b>Time (ms)</b>',
+        xaxis_title_text=f'<b>Bins ({np.round(bin_width,4)}{bin_unit})</b>',
         yaxis_title_text= \
-            f'<b>Motor Unit Activity Smoothed with {bin_width_ms}ms Gaussian Kernel</b>',
+            f'<b>Smoothed MU Activity<br>({smoothing_window} Sample Kernel)</b>',
         )
     # set theme to chosen template
     # fig.update_layout(template=plot_template)
@@ -611,6 +667,7 @@ def smooth(
     if do_plot:
         iplot(fig)
     
+    # put in a list for compatibility with calling functions
     figs = [fig]
     
     return figs

@@ -322,6 +322,101 @@ def sort(
         ephys_sample_rate, start_video_capture_idx, session_parameters, figs
         )
 
+def raster(
+    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_tracking,
+    session_date, rat_name, treadmill_speed, treadmill_incline,
+    camera_fps, alignto, vid_length, time_slice,
+    do_plot, plot_template, MU_colors, CH_colors
+    ):
+    
+    # check inputs for problems
+    assert len(ephys_channel_idxs_list)==1, \
+    "ephys_channel_idxs_list should only be 1 channel, so only select 1 channel, idiot! :)"
+    assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
+    
+    (MU_spikes_by_channel_dict, time_axis_for_ephys, time_axis_for_anipose,
+    ephys_sample_rate, start_video_capture_idx, session_parameters, _
+    ) = sort(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, anipose_data_dict, bodyparts_list=bodypart_for_tracking,
+        bodypart_for_tracking=bodypart_for_tracking,
+        session_date=session_date, rat_name=rat_name,
+        treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
+        camera_fps=camera_fps, alignto=alignto, vid_length=vid_length,
+        time_slice=time_slice, do_plot=False, # change T/F whether to plot sorting plots also
+        plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
+        )
+    
+    (foot_strike_idxs, foot_off_idxs, step_stats
+    ) = extract_step_idxs(
+    anipose_data_dict, bodypart_for_tracking=bodypart_for_tracking, session_date=session_date,
+    rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
+    camera_fps=camera_fps, alignto=alignto
+    )
+    
+    number_of_steps = int(step_stats.count())
+    selected_chan_key = [k for k in MU_spikes_by_channel_dict.keys()][0] # only 1 channel chosen is asserted
+    units_keys = [k for k in MU_spikes_by_channel_dict[selected_chan_key].keys()] # all unit keys
+    number_of_units = 0
+    for k in units_keys:
+        if MU_spikes_by_channel_dict[selected_chan_key][str(k)].any(): number_of_units+=1
+
+    unit_counter = 0
+    step_counter = 0
+    fig = go.Figure()
+    # for each channel and each trial's spike time series, plot onto the raster: plotly scatters
+    for iUnit, iUnitKey in enumerate(MU_spikes_by_channel_dict[selected_chan_key].keys()):
+        for iStep in range(number_of_steps):
+            # if number_of_units==2:
+            fig.add_trace(go.Scatter(
+                x=MU_spikes_by_channel_dict[selected_chan_key][iUnitKey],
+                y=np.zeros(len(time_axis_for_ephys))-unit_counter-iUnit*number_of_units,
+                name=f'step{iStep} unit{iUnit}',
+                mode='markers',
+                marker = dict(color=MU_colors[unit_counter], size=10),
+                opacity=1
+                ))
+            # elif number_of_units==3:
+            #     fig.add_trace(go.Scatter3d(
+            #         x=sliced_MU_smoothed_3d_array[iStep,:,0],
+            #         y=sliced_MU_smoothed_3d_array[iStep,:,1],
+            #         z=sliced_MU_smoothed_3d_array[iStep,:,2],
+            #         name=f'step{iStep}',
+            #         mode='lines',
+            #         opacity=.5,
+            #         line=dict(width=8,color=MU_colors[treadmill_incline//5],dash='solid')
+            #         ))
+            
+            step_counter+=1
+        unit_counter+=1
+    # if number_of_units==2:
+    fig.update_layout(
+        title_text=
+        f'<b>MU Activity Raster for All {number_of_steps} Steps</b>\
+        <br><sup>Session Info: {session_parameters}</sup>',
+        xaxis_title_text=f'<b>Time (ms)</b>',
+        yaxis_title_text=f'<b>Step (ms)</b>'
+        )
+    # elif number_of_units==3:
+    #     fig.update_layout(
+    #         title_text=
+    #         f'<b>MU Activity Raster for All {number_of_steps} Steps</b>\
+    #         <br><sup>Session Info: {session_parameters}</sup>',
+    #         xaxis_title_text=f'<b>Time (ms)</b>',
+    #         yaxis_title_text=f'<b>Step (ms)</b>'
+    #         )
+        
+    # set theme to chosen template
+    fig.update_layout(template=plot_template)
+        
+    if do_plot:
+        iplot(fig)
+    
+    figs = [fig]
+    return figs
+    
+
 def bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_tracking,

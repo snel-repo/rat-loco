@@ -45,7 +45,7 @@ phase_align=True # True/False
 alignto='foot off'
 
 ### Plotting Parameters
-plot_type = "state"
+plot_type = "raster"
 plot_units = [0,1,2]
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
@@ -89,6 +89,13 @@ if plot_type == "sort":
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
         camera_fps, alignto, vid_length, time_slice,
         do_plot, plot_template, MU_colors, CH_colors)
+elif plot_type == "raster":
+    process_spikes.raster(
+    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_tracking,
+    session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+    camera_fps, alignto, vid_length, time_slice,
+    do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "bin":
     process_spikes.bin_and_count(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,

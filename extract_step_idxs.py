@@ -1,3 +1,4 @@
+from pdb import set_trace
 import pandas as pd
 from scipy.signal import find_peaks, butter, filtfilt
 
@@ -14,7 +15,7 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 
 # function receives output of import_ephys_data.py as import_anipose_data.py to plot aligned data
 def extract_step_idxs(
-    anipose_data_dict, bodypart_for_tracking,
+    anipose_data_dict, bodypart_for_tracking, filter_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto
     ):
@@ -44,8 +45,8 @@ def extract_step_idxs(
 
     # identify motion peak locations for foot strike
     bodypart_to_filter = bodypart_for_tracking[0]
-    do_filter=True
-    if do_filter == True:
+    
+    if filter_tracking == True:
         filtered_signal = butter_highpass_filter(
             data=chosen_anipose_df[bodypart_to_filter].values,
             cutoff=0.5, fs=camera_fps, order=5)
@@ -54,22 +55,24 @@ def extract_step_idxs(
     
     foot_strike_idxs, _ = find_peaks(
         filtered_signal,
-        height=[0,None],
+        height=[None,None],
         threshold=None,
-        distance=20,
+        distance=30,
         prominence=None,
         width=None,
         wlen=None,
+        rel_height=None
         )
 
     foot_off_idxs, _ = find_peaks(
         -filtered_signal, # invert signal to find the troughs
-        height=[0,None],
+        height=[None,None],
         threshold=None,
-        distance=20,
+        distance=30,
         prominence=None,
         width=None,
         wlen=None,
+        rel_height=None
         )
 
     if alignto == 'foot strike':
@@ -77,6 +80,12 @@ def extract_step_idxs(
     elif alignto == 'foot off':
         step_idxs = foot_off_idxs
 
+    ## section plots bodypart tracking for the chosen session, for validation
+    # import matplotlib.pyplot as plt
+    # plt.plot(filtered_signal)
+    # plt.scatter(step_idxs, filtered_signal[step_idxs],c='r')
+    # plt.title(r'Check Peaks for ' + str(bodypart_to_filter))
+    # plt.show()
     # print(foot_strike_idxs - foot_off_idxs)
     df_fs_minus_fo = pd.DataFrame(step_idxs[1:] - step_idxs[:-1])
     print(
@@ -87,5 +96,4 @@ def extract_step_idxs(
     
     from IPython.display import display
     display(step_stats)
-
-    return foot_strike_idxs, foot_off_idxs, step_stats
+    return filtered_signal, foot_strike_idxs, foot_off_idxs, step_stats

@@ -29,7 +29,10 @@ def import_anipose_data(directory_list):
     list_of_pose_3d_dataframes = [] # stores all dataframes
 
     for iDir, directory_path in enumerate(directory_list):
-        session_folder_name = directory_list[iDir].split('/')[-1] # extract the last foldername
+        if directory_list[iDir][-1] != os.path.sep:   
+            session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
+        else:
+            session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
         session_date = session_folder_name[-6:] # extract the date from folder name
         date_list.append(session_date)
         file_list = os.listdir(directory_path)

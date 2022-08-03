@@ -15,7 +15,7 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 
 # function receives output of import_ephys_data.py as import_anipose_data.py to plot aligned data
 def extract_step_idxs(
-    anipose_data_dict, bodypart_for_tracking, filter_tracking,
+    anipose_data_dict, bodypart_for_alignment, filter_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto
     ):
@@ -44,7 +44,7 @@ def extract_step_idxs(
         ]
 
     # identify motion peak locations for foot strike
-    bodypart_to_filter = bodypart_for_tracking[0]
+    bodypart_to_filter = bodypart_for_alignment[0]
     
     if filter_tracking == True:
         filtered_signal = butter_highpass_filter(

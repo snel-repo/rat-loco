@@ -116,45 +116,53 @@ def sort(
     else: # do not filter
         filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
 
-    filtered_signal, foot_strike_idxs, foot_off_idxs, step_stats = extract_step_idxs(
+    filtered_signal, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = extract_step_idxs(
     anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
     filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name,
     treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline, camera_fps=camera_fps,
-    alignto=alignto)
+    alignto=alignto, time_frame=time_frame)
     
-    foot_strike_slice_idxs = [
-        foot_strike_idxs[int(step_stats['count']*time_frame[0])],
-        foot_strike_idxs[int(step_stats['count']*time_frame[1])]
-        ]
-    foot_off_slice_idxs = [
-        foot_off_idxs[int(step_stats['count']*time_frame[0])],
-        foot_off_idxs[int(step_stats['count']*time_frame[1])]
-        ]
+    foot_strike_slice_idxs = foot_strike_idxs[step_slice]
+    # foot_strike_idxs[np.where(
+    #     (foot_strike_idxs >= step_time_slice.start) &
+    #     (foot_strike_idxs <= step_time_slice.stop)
+    # )]
     
-    all_step_idx = []
+    foot_off_slice_idxs = foot_off_idxs[step_slice]
+    # foot_off_idxs[np.where(
+    #     (foot_off_idxs >= step_time_slice.start) &
+    #     (foot_off_idxs <= step_time_slice.stop)
+    # )]
     
-    if foot_strike_slice_idxs[0]<foot_off_slice_idxs[0]:
-        all_step_idx.append(foot_strike_slice_idxs[0])
-    else:
-        all_step_idx.append(foot_off_slice_idxs[0])
+    # foot_strike_slice_idxs = [
+    #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[0])],
+    #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]
+    #     ]
+    # foot_off_slice_idxs = [
+    #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[0])],
+    #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]
+    #     ]
     
-    if foot_strike_slice_idxs[1]>foot_off_slice_idxs[1]:
-        all_step_idx.append(foot_strike_slice_idxs[1])
-    else:
-        all_step_idx.append(foot_off_slice_idxs[1])
-        
+    # all_step_idx = []
+    # if alignto == 'foot strike':
+    #     all_step_idx.append(foot_strike_slice_idxs[0])
+    #     all_step_idx.append(foot_strike_slice_idxs[1])
+    # elif alignto == 'foot off':
+    #     all_step_idx.append(foot_off_slice_idxs[0])
+    #     all_step_idx.append(foot_off_slice_idxs[1])
+            
     # set conversion ratio from camera to electrophysiology sample rate
     step_to_ephys_conversion_ratio = ephys_sample_rate/camera_fps
     step_idx_ephys_time = []
     step_idx_ephys_time.append(
-        int(step_to_ephys_conversion_ratio*(all_step_idx[0]-step_stats['mean']//2))+start_video_capture_ephys_idx)
+        int(step_to_ephys_conversion_ratio*(step_time_slice.start))+start_video_capture_ephys_idx)
     step_idx_ephys_time.append(
-        int(step_to_ephys_conversion_ratio*(all_step_idx[1]+step_stats['mean']//2))+start_video_capture_ephys_idx)
-    if time_frame == [0,1]:
-        step_slice = slice(0,-1) # get full anipose traces, if [0,1]
-    else:
-        step_slice = slice(all_step_idx[0],all_step_idx[1])
-    step_slice_ephys_time = slice(step_idx_ephys_time[0],step_idx_ephys_time[1])
+        int(step_to_ephys_conversion_ratio*(step_time_slice.stop))+start_video_capture_ephys_idx)
+    # if time_frame == [0,1]:
+    #     step_slice = slice(0,-1) # get full anipose traces, if [0,1]
+    # else:
+    #     step_slice = slice(step_time_slice.start,step_time_slice.stop)
+    step_time_slice_ephys = slice(step_idx_ephys_time[0],step_idx_ephys_time[1])
     
     # cluster the spikes waveforms with PCA
     # pca = PCA(n_components=3)
@@ -170,7 +178,7 @@ def sort(
         MU_spike_idxs = [] # initialize empty list for each channel to hold next sorted spike idxs
         for iUnit, iAmplitudes in enumerate(MU_spike_amplitudes_list):
             if channel_number not in [-1,16]:
-                ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[step_slice_ephys_time, channel_number]
+                ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[step_time_slice_ephys, channel_number]
                 if filter_ephys == 'notch' or filter_ephys == 'both':
                     ephys_data_for_channel = iir_notch(
                         ephys_data_for_channel, ephys_sample_rate)
@@ -231,8 +239,8 @@ def sort(
             if name == bodypart_for_alignment[0]:
                 # filtered signal plot (used for alignment)
                 fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[step_slice],
-                    y=filtered_signal[step_slice], # + 25*bodypart_counter, # 25 mm spread
+                    x=time_axis_for_anipose[step_time_slice],
+                    y=filtered_signal[step_time_slice], # + 25*bodypart_counter, # 25 mm spread
                     name=bodyparts_list[bodypart_counter]+' filtered' if filter_tracking
                         else bodyparts_list[bodypart_counter],
                     mode='lines',
@@ -240,17 +248,10 @@ def sort(
                     line=dict(width=2)),
                     row=1, col=1
                     )
-                # set_trace()
                 # foot strikes
                 fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[foot_strike_idxs[np.where(
-                        (foot_strike_idxs >= foot_strike_slice_idxs[0]) &
-                        (foot_strike_idxs <= foot_strike_slice_idxs[1])
-                        )]],
-                    y=filtered_signal[foot_strike_idxs[np.where(
-                        (foot_strike_idxs >= foot_strike_slice_idxs[0]) &
-                        (foot_strike_idxs <= foot_strike_slice_idxs[1])
-                        )]],
+                    x=time_axis_for_anipose[foot_strike_slice_idxs],
+                    y=filtered_signal[foot_strike_slice_idxs],
                     name=bodyparts_list[bodypart_counter]+' strike',
                     mode='markers',
                     marker = dict(color='black'),
@@ -260,14 +261,8 @@ def sort(
                     )
                 # foot offs               
                 fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[foot_off_idxs[np.where(
-                        (foot_off_idxs >= foot_off_slice_idxs[0]) &
-                        (foot_off_idxs <= foot_off_slice_idxs[1])
-                        )]],
-                    y=filtered_signal[foot_off_idxs[np.where(
-                        (foot_off_idxs >= foot_off_slice_idxs[0]) &
-                        (foot_off_idxs <= foot_off_slice_idxs[1])
-                        )]],
+                    x=time_axis_for_anipose[foot_off_slice_idxs],
+                    y=filtered_signal[foot_off_slice_idxs],
                     name=bodyparts_list[bodypart_counter]+' off',
                     mode='markers',
                     marker = dict(color='blue'),
@@ -278,7 +273,7 @@ def sort(
                 bodypart_counter += 1 # increment for each matching bodypart
             else:
                 fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[step_slice],
+                    x=time_axis_for_anipose[step_time_slice],
                     y=values.values, # + 25*bodypart_counter,
                     name=bodyparts_list[bodypart_counter],
                     mode='lines',
@@ -294,13 +289,13 @@ def sort(
     # plot all ephys traces and/or SYNC channel
     for iChannel, channel_number in enumerate(ephys_channel_idxs_list):
         fig.add_trace(go.Scatter(
-            x=time_axis_for_ephys[step_slice_ephys_time],
+            x=time_axis_for_ephys[step_time_slice_ephys],
             # if statement provides different scalings and offsets for ephys vs. SYNC channel
             y=(chosen_ephys_data_continuous_obj.samples[
-                step_slice_ephys_time,channel_number] - 5000*iChannel
+                step_time_slice_ephys,channel_number] - 5000*iChannel
                 if channel_number not in [-1,16]
                 else (chosen_ephys_data_continuous_obj.samples[
-                    step_slice_ephys_time,channel_number]+4)*0.5e3
+                    step_time_slice_ephys,channel_number]+4)*0.5e3
                 ),
             name=f"CH{channel_number}" if channel_number not in [-1,16] else "SYNC",
             mode='lines',
@@ -337,7 +332,7 @@ def sort(
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
                         MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_idx_ephys_time[0]],
-                    y=np.zeros(len(time_axis_for_ephys[step_slice_ephys_time]))-unit_counter,
+                    y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys]))-unit_counter,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',
                     marker_symbol='line-ns',
@@ -406,24 +401,24 @@ def bin_and_count(
         plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
         )    
 
-    _, foot_strike_idxs, foot_off_idxs, step_stats = extract_step_idxs(
+    _, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = extract_step_idxs(
         anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, filter_tracking=filter_tracking,
         session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed,
-        treadmill_incline=treadmill_incline, camera_fps=camera_fps, alignto=alignto
+        treadmill_incline=treadmill_incline, camera_fps=camera_fps, alignto=alignto, time_frame=time_frame
         )
 
+
+    
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
     MU_spikes_dict = MU_spikes_by_channel_dict[str(ephys_channel_idxs_list[0])]
     # set conversion ratio from camera to electrophysiology sample rate
     step_to_ephys_conversion_ratio = ephys_sample_rate/camera_fps
     # initialize zero array to carry step-aligned spike activity,
     # with shape: Steps x Time (in ephys sample rate) x Units
-    number_of_steps = int(step_stats['count'])
-    # -2 steps to account for when we ignore the noisy first and last steps
-    number_of_steps_used = number_of_steps-2
+    number_of_steps = int(sliced_step_stats['count'])
     MU_spikes_3d_array_ephys_time = np.zeros(
-        (number_of_steps_used, 
-        int(step_stats['max']*step_to_ephys_conversion_ratio),
+        (number_of_steps, 
+        int(sliced_step_stats['max']*step_to_ephys_conversion_ratio),
         len(MU_spikes_dict),
         ))
     MU_spikes_3d_array_ephys_2π = MU_spikes_3d_array_ephys_time.copy()
@@ -434,58 +429,60 @@ def bin_and_count(
     MU_step_aligned_spike_idxs_dict = {key: [] for key in MU_spikes_dict.keys()}
     MU_step_2π_warped_spike_idxs_dict = {key: [] for key in MU_spikes_dict.keys()}
     # convert foot strike/off indexes to the sample rate of electrophysiology data
-    foot_strike_idxs_in_ephys_time = (
-        foot_strike_idxs*step_to_ephys_conversion_ratio)+start_video_capture_ephys_idx
-    foot_off_idxs_in_ephys_time = (
-        foot_off_idxs*step_to_ephys_conversion_ratio)+start_video_capture_ephys_idx
     # set chosen alignment bodypart and choose corresponding index values
     if alignto == 'foot strike':
+        foot_strike_idxs_in_ephys_time = (
+            (foot_strike_idxs[step_slice])*step_to_ephys_conversion_ratio)#+start_video_capture_ephys_idx
         step_idxs_in_ephys_time = foot_strike_idxs_in_ephys_time
     elif alignto == 'foot off':
+        foot_off_idxs_in_ephys_time = (
+            (foot_off_idxs[step_slice])*step_to_ephys_conversion_ratio)#+start_video_capture_ephys_idx
         step_idxs_in_ephys_time = foot_off_idxs_in_ephys_time
+
     phase_warp_2π_coeff_list = []
     # fill 3d numpy array with Steps x Time x Units data, and a list of aligned idxs
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()): # for each unit
         MU_spikes_idx_arr = np.array(MU_spikes_dict[iUnitKey])
-        for iStep in range(number_of_steps_used): # for each step
+        for iStep in range(number_of_steps): # for each step
             # keep track of index boundaries for each step
-            this_step_idx = step_idxs_in_ephys_time[iStep+1].astype(int)
-            next_step_idx = step_idxs_in_ephys_time[iStep+2].astype(int)
-            # filter out indexes which are beyond the video's and this step's boundaries
-            spike_idxs_in_step_and_video_bounded = MU_spikes_idx_arr[np.where(
+            this_step_idx = step_idxs_in_ephys_time[iStep].astype(int)
+            next_step_idx = step_idxs_in_ephys_time[iStep+1].astype(int)
+            # filter out indexes which are outside the slice or this step's boundaries
+            spike_idxs_in_step_and_slice_bounded = MU_spikes_idx_arr[np.where(
                 (MU_spikes_idx_arr < next_step_idx) &
                 (MU_spikes_idx_arr > this_step_idx) &
-                (MU_spikes_idx_arr < (time_axis_for_anipose.max()*ephys_sample_rate).astype(int)) &
-                (MU_spikes_idx_arr > start_video_capture_ephys_idx)
+                (MU_spikes_idx_arr > (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr < (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
                 )]
             # subtract current step index to align to each step, and convert to integer index
             MU_spikes_idxs_for_step = (
-                spike_idxs_in_step_and_video_bounded - this_step_idx).astype(int)
+                spike_idxs_in_step_and_slice_bounded - this_step_idx).astype(int)
             # store aligned indexes for each step
             MU_step_aligned_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step)
             # if spikes are present, set them to 1 for this unit during this step
             if len(MU_spikes_idxs_for_step)!=0:
                 MU_spikes_3d_array_ephys_time[iStep, MU_spikes_idxs_for_step, iUnit] = 1
+            if iUnitKey == '1700' and iStep == 8: set_trace()
         # create phase aligned step indexes, with max index for each step set to 2π    
         bin_width_eph_2π = []
-        for πStep in range(number_of_steps_used): # for each step
+        for πStep in range(number_of_steps): # for each step
             # keep track of index boundaries for each step
-            this_step_2π_idx = step_idxs_in_ephys_time[πStep+1].astype(int)
-            next_step_2π_idx = step_idxs_in_ephys_time[πStep+2].astype(int)
-            # filter out indexes which are beyond the video's and this step_2π's boundaries
-            spike_idxs_in_step_2π_and_video_bounded = MU_spikes_idx_arr[np.where(
+            this_step_2π_idx = step_idxs_in_ephys_time[πStep].astype(int)
+            next_step_2π_idx = step_idxs_in_ephys_time[πStep+1].astype(int)
+            # filter out indexes which are outside the slice or this step_2π's boundaries
+            spike_idxs_in_step_2π_and_slice_bounded = MU_spikes_idx_arr[np.where(
                 (MU_spikes_idx_arr < next_step_2π_idx) &
                 (MU_spikes_idx_arr > this_step_2π_idx) &
-                (MU_spikes_idx_arr < (time_axis_for_anipose.max()*ephys_sample_rate).astype(int)) &
-                (MU_spikes_idx_arr > start_video_capture_ephys_idx)
+                (MU_spikes_idx_arr > (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr < (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
                 )]
             # coefficient to make step out of 2π radians, step made to be 2π after multiplication
             phase_warp_2π_coeff = 2*np.pi/(
-                step_idxs_in_ephys_time[πStep+2]-step_idxs_in_ephys_time[πStep+1])
+                step_idxs_in_ephys_time[πStep+1]-step_idxs_in_ephys_time[πStep])
             phase_warp_2π_coeff_list.append(phase_warp_2π_coeff)
             # subtract this step start idx, and convert to an integer index
             MU_spikes_idxs_for_step_aligned = (
-                spike_idxs_in_step_2π_and_video_bounded - this_step_2π_idx).astype(int)
+                spike_idxs_in_step_2π_and_slice_bounded - this_step_2π_idx).astype(int)
             MU_spikes_idxs_for_step_2π = MU_spikes_idxs_for_step_aligned * phase_warp_2π_coeff
             # store aligned indexes for each step_2π
             MU_step_2π_warped_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step_2π)
@@ -497,6 +494,7 @@ def bin_and_count(
                     np.round(MU_spikes_idxs_for_step_2π/(
                         2*np.pi)*MU_spikes_3d_array_ephys_2π.shape[1]).astype(int),
                     iUnit] = 1
+                
     # bin 3d array to time bins with width: bin_width_ms
     ms_duration = MU_spikes_3d_array_ephys_time.shape[1]/ephys_sample_rate*1000
     # round up number of steps to prevent index overflows
@@ -582,10 +580,10 @@ def bin_and_count(
     fig1.update_xaxes(title_text='<b>Time During Step (milliseconds)</b>', row = 1, col = 1)
     fig1.update_xaxes(title_text='<b>Phase During Step (radians)</b>', row = 1, col = 2)
     fig1.update_yaxes(title_text=\
-        f'<b>Binned Spike Count Across<br>{number_of_steps_used} Steps ({bin_width_ms}ms bins)</b>',
+        f'<b>Binned Spike Count Across<br>{number_of_steps} Steps ({bin_width_ms}ms bins)</b>',
         row = 1, col = 1)
     fig1.update_yaxes(title_text=\
-        f'<b>Binned Spike Count Across<br>{number_of_steps_used} Steps ({bin_2π_rnd}rad bins)</b>',
+        f'<b>Binned Spike Count Across<br>{number_of_steps} Steps ({bin_2π_rnd}rad bins)</b>',
         row = 1, col = 2)
     fig1.update_yaxes(matches='y')
     
@@ -609,7 +607,7 @@ def bin_and_count(
     # set all titles
     fig2.update_layout(
         title_text=
-        f'<b>Total Motor Unit Threshold Crossings Across {number_of_steps_used} Steps</b>\
+        f'<b>Total Motor Unit Threshold Crossings Across {number_of_steps} Steps</b>\
         <br><sup>Session Info: {session_parameters}</sup>',
         # xaxis_title_text='<b>Motor Unit Voltage Thresholds</b>',
         yaxis_title_text='<b>Spike Count</b>',

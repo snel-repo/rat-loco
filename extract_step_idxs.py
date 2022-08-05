@@ -1,5 +1,6 @@
 from pdb import set_trace
 import pandas as pd
+import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
 
 def butter_highpass(cutoff, fs, order=2):
@@ -17,7 +18,7 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 def extract_step_idxs(
     anipose_data_dict, bodypart_for_alignment, filter_tracking,
     session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, alignto
+    camera_fps, alignto, time_frame
     ):
 
     # format inputs to avoid ambiguities
@@ -79,7 +80,43 @@ def extract_step_idxs(
         step_idxs = foot_strike_idxs
     elif alignto == 'foot off':
         step_idxs = foot_off_idxs
-
+        
+    all_steps_diff = pd.DataFrame(np.diff(step_idxs[1:-1])) # skip outermost steps! (noisy)
+    all_step_stats = all_steps_diff.describe()[0]
+    
+    start_step = int((all_step_stats['count'])*time_frame[0])
+    stop_step = int((all_step_stats['count'])*time_frame[1])
+    step_slice = slice(start_step, stop_step)
+    
+    foot_strike_slice_idxs = [
+        foot_strike_idxs[start_step],
+        foot_strike_idxs[stop_step]
+        ]
+    foot_off_slice_idxs = [
+        foot_off_idxs[start_step],
+        foot_off_idxs[stop_step]
+        ]
+    
+    all_step_idx = []
+    if alignto == 'foot strike':
+        all_step_idx.append(foot_strike_slice_idxs[0])
+        all_step_idx.append(foot_strike_slice_idxs[1])
+    elif alignto == 'foot off':
+        all_step_idx.append(foot_off_slice_idxs[0])
+        all_step_idx.append(foot_off_slice_idxs[1])
+    
+    step_time_slice = slice(all_step_idx[0],all_step_idx[1])
+    sliced_steps_diff = pd.DataFrame(np.diff(step_idxs[start_step:stop_step]))#step_idxs[1:] - step_idxs[:-1])
+    
+    print(
+        f"Inter-step timing stats for {alignto}, from step {start_step} to {stop_step}:\
+            \nFile: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}")
+    
+    sliced_step_stats = sliced_steps_diff.describe()[0]
+    
+    from IPython.display import display
+    display(sliced_step_stats)
+    
     ## section plots bodypart tracking for the chosen session, for validation
     # import matplotlib.pyplot as plt
     # plt.plot(filtered_signal)
@@ -87,13 +124,5 @@ def extract_step_idxs(
     # plt.title(r'Check Peaks for ' + str(bodypart_to_filter))
     # plt.show()
     # print(foot_strike_idxs - foot_off_idxs)
-    df_fs_minus_fo = pd.DataFrame(step_idxs[1:] - step_idxs[:-1])
-    print(
-            f"Inter-step timing statistics for {alignto}:\n\
-            File: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
-        )
-    step_stats = df_fs_minus_fo.describe()[0]
-    
-    from IPython.display import display
-    display(step_stats)
-    return filtered_signal, foot_strike_idxs, foot_off_idxs, step_stats
+
+    return filtered_signal, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice

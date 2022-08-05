@@ -29,17 +29,17 @@ anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_li
 
 ### Analysis parameters
 MU_spike_amplitudes_list = [[150,500],[500.0001,1700],[1700.0001,5000]]
-ephys_channel_idxs_list = [2] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
+ephys_channel_idxs_list = [7] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 filter_tracking = False # True/False
 bodyparts_list=['palm_L_y']#,'palm_R_y','mtar_L_y','mtar_R_y'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
-session_date=4*[220715]#3*[220603]
+session_date=4*[220715]#3*[220603]#
 rat_name=4*['cleopatra']#3*['dogerat']
 treadmill_speed=4*[20]
-treadmill_incline=[0,5,10,15]
-camera_fps=125#100
-vid_length=10#20
+treadmill_incline=[0,5,10,15]#[0,5,10,15]
+camera_fps=125#125#100
+vid_length=10#10#20
 time_frame=[0,1] # 2-element list slicing between 0 and 1, inclusive, such as [0,1] or [0.2,0.55]
 bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
@@ -59,7 +59,7 @@ seq_dict_keys = ['Blues', 'BuGn', 'BuPu', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Or
 plot_template = pio.templates.default = 'plotly_white'
 
 ### Define sequential color lists for plot consistency
-N_colors = 36#6
+N_colors = 4#6
 # CH_colors = cl.to_rgb(cl.interp(plotly.colors.sequential.Jet,16))
 CH_colors = cl.to_rgb(cl.interp(cl.scales['6']['seq']['Greys'],N_colors))[-1:-N_colors:-1] # black to grey, 16
 MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # rainbow scale, 32

@@ -4,13 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from plotly.offline import iplot
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.signal import find_peaks, butter, filtfilt, iirnotch
-from scipy.ndimage import gaussian_filter1d
 from pdb import set_trace
 from sklearn.decomposition import PCA
 from sklearn.manifold import Isomap
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, RobustScaler
 import umap
 import umap.plot
@@ -31,9 +27,9 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
     # format inputs to avoid ambiguities
     session_parameters_lst = []
     chosen_anipose_dfs_lst = []
-    foot_strike_idxs_lst = []
-    foot_off_idxs_lst = []
-    all_step_idx = []
+    # foot_strike_idxs_lst = []
+    # foot_off_idxs_lst = []
+    # all_step_idx = []
     step_idx_slice_lst = []
     for iPar in range(len(treadmill_incline)):
         _, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = \
@@ -42,27 +38,8 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
                               rat_name=rat_name[iPar], treadmill_speed=treadmill_speed[iPar], 
                               treadmill_incline=treadmill_incline[iPar], camera_fps=camera_fps,
                               alignto=alignto, time_frame=time_frame)
-        foot_strike_slice_idxs = [
-            foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
-            foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
-            ]
-        foot_off_slice_idxs = [
-            foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
-            foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
-            ]
-        all_step_idx.append([])
-        if foot_strike_slice_idxs[0]<foot_off_slice_idxs[0]:
-            all_step_idx[-1].append(foot_strike_slice_idxs[0])
-        else:
-            all_step_idx[-1].append(foot_off_slice_idxs[0])
-        if foot_strike_slice_idxs[1]>foot_off_slice_idxs[1]:
-            all_step_idx[-1].append(foot_strike_slice_idxs[1])
-        else:
-            all_step_idx[-1].append(foot_off_slice_idxs[1])
-        step_idx_slice_lst.append(slice(all_step_idx[-1][0],all_step_idx[-1][1]))
-        
-        foot_strike_idxs_lst.append(foot_strike_idxs)
-        foot_off_idxs_lst.append(foot_off_idxs)
+
+        step_idx_slice_lst.append(step_time_slice)
         i_session_date = session_date[iPar]
         i_rat_name = str(rat_name[iPar]).lower()
         i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
@@ -72,12 +49,32 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
         chosen_anipose_dfs_lst.append(anipose_data_dict[session_parameters_lst[iPar]])
         chosen_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
                                 np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
+        # foot_strike_slice_idxs = [
+        #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
+        #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
+        #     ]
+        # foot_off_slice_idxs = [
+        #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
+        #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
+        #     ]
+        # all_step_idx.append([])
+        # if foot_strike_slice_idxs[0]<foot_off_slice_idxs[0]:
+        #     all_step_idx[-1].append(foot_strike_slice_idxs[0])
+        # else:
+        #     all_step_idx[-1].append(foot_off_slice_idxs[0])
+        # if foot_strike_slice_idxs[1]>foot_off_slice_idxs[1]:
+        #     all_step_idx[-1].append(foot_strike_slice_idxs[1])
+        # else:
+        #     all_step_idx[-1].append(foot_off_slice_idxs[1])
+        # step_idx_slice_lst.append(slice(all_step_idx[-1][0],all_step_idx[-1][1]))
+        # foot_strike_idxs_lst.append(foot_strike_idxs)
+        # foot_off_idxs_lst.append(foot_off_idxs)
         
     # choose alignment feature
-    if alignto == 'foot strike':
-        step_idxs = foot_strike_idxs
-    elif alignto == 'foot off':
-        step_idxs = foot_off_idxs
+    # if alignto == 'foot strike':
+    #     step_idxs = foot_strike_idxs
+    # elif alignto == 'foot off':
+    #     step_idxs = foot_off_idxs
             
     # convert chosen anipose dict into DataFrame        
     cols = chosen_anipose_dfs_lst[0].columns
@@ -96,7 +93,7 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
         body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
         for iCol in body_dim_cols:
             data_nose_aligned[iCol] = np.sqrt(
-                (body_anipose_data["nose"+iDim]-body_anipose_data[iCol])**2)
+                (body_anipose_data["tailbase"+iDim]-body_anipose_data[iCol])**2)
             
     # anipose_steps_data = anipose_data.iloc[step_idx_slice_lst]
     scaled_data = data_nose_aligned# StandardScaler().fit_transform(data_nose_aligned)
@@ -231,11 +228,11 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
             ))
     iplot(umap_go)
     
-    umap_fig1 = umap.plot.connectivity(umap_mapper)#, edge_bundling='hammer')
+    # umap_fig1 = umap.plot.connectivity(umap_mapper)#, edge_bundling='hammer')
     # umap_fig2 = umap.plot.points(umap_mapper, labels=anipose_data['Labels'])
     
-    plt.title('UMAP Embedding of 30-dimensional Behavior Across Incline Conditions')
-    umap.plot.show(umap_fig1)
+    # plt.title('UMAP Embedding of 30-dimensional Behavior Across Incline Conditions')
+    # umap.plot.show(umap_fig1)
     # umap.plot.show(umap_fig2)
     
     return

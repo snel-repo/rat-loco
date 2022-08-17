@@ -76,38 +76,45 @@ def extract_step_idxs(
         rel_height=None
         )
 
+    # index off outermost steps, to skip noisy initial tracking
+    foot_strike_idxs=foot_strike_idxs[1:-1]
+    foot_off_idxs=foot_off_idxs[1:-1]
+    
     if alignto == 'foot strike':
         step_idxs = foot_strike_idxs
     elif alignto == 'foot off':
         step_idxs = foot_off_idxs
         
-    all_steps_diff = pd.DataFrame(np.diff(step_idxs[1:-1])) # skip outermost steps! (noisy)
+    all_steps_diff = pd.DataFrame(np.diff(step_idxs))
     all_step_stats = all_steps_diff.describe()[0]
     
-    start_step = int((all_step_stats['count'])*time_frame[0])
-    stop_step = int((all_step_stats['count'])*time_frame[1])
-    step_slice = slice(start_step, stop_step)
+    # foot_strike_slice_idxs = [
+    #     foot_strike_idxs[start_step],
+    #     foot_strike_idxs[stop_step]
+    #     ]
+    # foot_off_slice_idxs = [
+    #     foot_off_idxs[start_step],
+    #     foot_off_idxs[stop_step]
+    #     ]
+    if time_frame==1:
+        step_time_slice = slice(0,-1)
+        time_frame=[0,1]
+        start_step = int((all_step_stats['count']+1)*time_frame[0])
+        stop_step = int((all_step_stats['count']+1)*time_frame[1])
+        step_slice = slice(start_step, stop_step)
+    else:
+        start_step = int((all_step_stats['count']+1)*time_frame[0])
+        stop_step = int((all_step_stats['count']+1)*time_frame[1])
+        step_slice = slice(start_step, stop_step)
+        if alignto == 'foot strike':
+            step_time_slice = slice(foot_strike_idxs[start_step],foot_strike_idxs[stop_step-1])
+        elif alignto == 'foot off':
+            step_time_slice = slice(foot_off_idxs[start_step],foot_off_idxs[stop_step-1])
     
-    foot_strike_slice_idxs = [
-        foot_strike_idxs[start_step],
-        foot_strike_idxs[stop_step]
-        ]
-    foot_off_slice_idxs = [
-        foot_off_idxs[start_step],
-        foot_off_idxs[stop_step]
-        ]
-    
-    all_step_idx = []
-    if alignto == 'foot strike':
-        all_step_idx.append(foot_strike_slice_idxs[0])
-        all_step_idx.append(foot_strike_slice_idxs[1])
-    elif alignto == 'foot off':
-        all_step_idx.append(foot_off_slice_idxs[0])
-        all_step_idx.append(foot_off_slice_idxs[1])
-    
-    step_time_slice = slice(all_step_idx[0],all_step_idx[1])
+    # step_time_slice = slice(all_step_idx[0],all_step_idx[1])
     sliced_steps_diff = pd.DataFrame(np.diff(step_idxs[start_step:stop_step]))#step_idxs[1:] - step_idxs[:-1])
     
+    # set_trace()
     print(
         f"Inter-step timing stats for {alignto}, from step {start_step} to {stop_step}:\
             \nFile: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}")

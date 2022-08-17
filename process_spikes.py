@@ -158,11 +158,11 @@ def sort(
         int(step_to_ephys_conversion_ratio*(step_time_slice.start))+start_video_capture_ephys_idx)
     step_idx_ephys_time.append(
         int(step_to_ephys_conversion_ratio*(step_time_slice.stop))+start_video_capture_ephys_idx)
-    # if time_frame == [0,1]:
-    #     step_slice = slice(0,-1) # get full anipose traces, if [0,1]
-    # else:
-    #     step_slice = slice(step_time_slice.start,step_time_slice.stop)
-    step_time_slice_ephys = slice(step_idx_ephys_time[0],step_idx_ephys_time[1])
+    if time_frame == 1:
+        step_time_slice_ephys = slice(0,-1) # get full anipose traces, if [0,1]
+    else:
+        # step_slice = slice(step_time_slice.start,step_time_slice.stop)
+        step_time_slice_ephys = slice(step_idx_ephys_time[0],step_idx_ephys_time[1])
     
     # cluster the spikes waveforms with PCA
     # pca = PCA(n_components=3)
@@ -238,6 +238,7 @@ def sort(
         if name in bodyparts_list:
             if name == bodypart_for_alignment[0]:
                 # filtered signal plot (used for alignment)
+                # set_trace()
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[step_time_slice],
                     y=filtered_signal[step_time_slice], # + 25*bodypart_counter, # 25 mm spread
@@ -317,9 +318,9 @@ def sort(
                 # plot spike locations onto each selected ephys trace
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
-                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_idx_ephys_time[0]],
+                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_time_slice_ephys.start],
                     y=chosen_ephys_data_continuous_obj.samples[
-                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_idx_ephys_time[0],
+                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_time_slice_ephys.start,
                         channel_number]-5000*iChannel,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',
@@ -331,7 +332,7 @@ def sort(
                 # plot isolated spikes into raster plot for each selected ephys trace
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
-                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_idx_ephys_time[0]],
+                        MU_spikes_by_channel_dict[str(channel_number)][iUnitKey][:]+step_time_slice_ephys.start],
                     y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys]))-unit_counter,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',

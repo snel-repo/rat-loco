@@ -1,4 +1,4 @@
-import import_OE_data, import_anipose_data, process_spikes, cluster_steps #, plot_loco_ephys
+import import_OE_data, import_anipose_data, process_spikes, cluster_steps, pandas_eda #, plot_loco_ephys
 import plotly.io as pio
 import colorlover as cl
 from numpy import pi
@@ -28,8 +28,8 @@ ephys_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
 anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_list)
 
 ### Analysis parameters
-MU_spike_amplitudes_list = [[150,500],[500.0001,1700],[1700.0001,5000]]
-ephys_channel_idxs_list = [1,2,3,13,14,16] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
+MU_spike_amplitudes_list = [[50,150],[150.0001,500],[500.0001,1700],[1700.0001,5000]]
+ephys_channel_idxs_list = [13]#[1,2,3,13,14]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 filter_tracking = False # True/False
 bodyparts_list=['palm_L_y']#,'palm_R_y','mtar_L_y','mtar_R_y'] #['palm_L_y']
@@ -37,15 +37,15 @@ bodypart_for_alignment = ['palm_L_y']
 session_date=4*[220715]#3*[220603]#
 rat_name=4*['cleopatra']#3*['dogerat']
 treadmill_speed=4*[20]
-treadmill_incline=[0,5,10,15]#[0,5,10,15]
+treadmill_incline=[15]#[0,5,10,15]#[0,5,10,15]
 camera_fps=125#125#100
 vid_length=10#10#20
-time_frame=1#[0,1] # 2-element list slicing between 0 and 1, set to 1 for full ephys plotting
+time_frame=[0,.2] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
-smoothing_window = [0] # bins
-phase_align=True # True/False
-alignto='foot strike'
+smoothing_window = [10] # bins
+phase_align=False # True/False
+alignto='foot off' # "foot strike"/"foot off"
 
 ### Plotting Parameters
 plot_type = "sort"
@@ -59,7 +59,7 @@ seq_dict_keys = ['Blues', 'BuGn', 'BuPu', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Or
 plot_template = pio.templates.default = 'plotly_white'
 
 ### Define sequential color lists for plot consistency
-N_colors = 20
+N_colors = 6#len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)
 # CH_colors = cl.to_rgb(cl.interp(plotly.colors.sequential.Jet,16))
 CH_colors = cl.to_rgb(cl.interp(cl.scales['6']['seq']['Greys'],N_colors))[-1:-N_colors:-1] # black to grey, 16
 MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # rainbow scale, 32
@@ -115,25 +115,32 @@ elif plot_type == "raster":
         do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "smooth":
     process_spikes.smooth(
-    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict, bodypart_for_alignment,
-    session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-    camera_fps, alignto, vid_length, time_frame,
-    do_plot, phase_align, plot_template, MU_colors, CH_colors)
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict, bodypart_for_alignment,
+        session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+        camera_fps, alignto, vid_length, time_frame,
+        do_plot, phase_align, plot_template, MU_colors, CH_colors)
 elif plot_type == "state_space":
     process_spikes.state_space(
-    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict, bodypart_for_alignment,
-    session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-    camera_fps, alignto, vid_length, time_frame,
-    do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors)
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict, bodypart_for_alignment,
+        session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+        camera_fps, alignto, vid_length, time_frame,
+        do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors)
+elif plot_type == "pandas_eda":
+    pandas_eda.pandas_eda(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+        session_date, rat_name, treadmill_speed, treadmill_incline,
+        camera_fps, alignto, vid_length, time_frame,
+        do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "multi_bin":
     from plotly.offline import iplot
     from plotly.subplots import make_subplots
     num_sessions = len(session_date)
     big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes='columns',shared_yaxes=True,
                             horizontal_spacing=0.1, vertical_spacing=0.1,
-                            subplot_titles=tuple(6*['tmp_title']))
+                            subplot_titles=tuple(2*num_sessions*['tmp_title']))
     for iRec in range(num_sessions):
         (_,_,_,_,_,_,_,_,_,figs) = process_spikes.bin_and_count(
             ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,

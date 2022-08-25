@@ -1,5 +1,3 @@
-from cmath import nan
-from functools import reduce
 from extract_step_idxs import extract_step_idxs
 import pandas as pd
 import numpy as np
@@ -189,7 +187,7 @@ def sort(
                     -ephys_data_for_channel,
                     height=iAmplitudes,
                     threshold=None,
-                    distance=30,
+                    distance=ephys_sample_rate//1000,
                     prominence=None,
                     width=None,
                     wlen=None,
@@ -371,10 +369,10 @@ def sort(
 
     if do_plot:
             iplot(fig)
-
+    # set_trace()
     return (
         MU_spikes_by_channel_dict, time_axis_for_ephys, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_ephys_idx, session_parameters, figs
+        ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, figs
     )
 
 def bin_and_count(
@@ -391,7 +389,7 @@ def bin_and_count(
     assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
     
     (MU_spikes_by_channel_dict, _, time_axis_for_anipose,
-    ephys_sample_rate, start_video_capture_ephys_idx, session_parameters, _) = sort(
+    ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, _) = sort(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, filter_tracking, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
         bodypart_for_alignment=bodypart_for_alignment,
@@ -411,7 +409,7 @@ def bin_and_count(
 
     
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
-    MU_spikes_dict = MU_spikes_by_channel_dict[str(ephys_channel_idxs_list[0])]
+    MU_spikes_dict = MU_spikes_by_channel_dict[str(ephys_channel_idxs_list[0])]#+step_time_slice_ephys.start
     # set conversion ratio from camera to electrophysiology sample rate
     step_to_ephys_conversion_ratio = ephys_sample_rate/camera_fps
     # initialize zero array to carry step-aligned spike activity,
@@ -443,7 +441,7 @@ def bin_and_count(
     phase_warp_2π_coeff_list = []
     # fill 3d numpy array with Steps x Time x Units data, and a list of aligned idxs
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()): # for each unit
-        MU_spikes_idx_arr = np.array(MU_spikes_dict[iUnitKey])
+        MU_spikes_idx_arr = np.array(MU_spikes_dict[iUnitKey]+step_idxs_in_ephys_time[0])
         for iStep in range(number_of_steps): # for each step
             # keep track of index boundaries for each step
             this_step_idx = step_idxs_in_ephys_time[iStep].astype(int)
@@ -451,9 +449,9 @@ def bin_and_count(
             # filter out indexes which are outside the slice or this step's boundaries
             spike_idxs_in_step_and_slice_bounded = MU_spikes_idx_arr[np.where(
                 (MU_spikes_idx_arr < next_step_idx) &
-                (MU_spikes_idx_arr > this_step_idx) &
-                (MU_spikes_idx_arr > (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
-                (MU_spikes_idx_arr < (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
+                (MU_spikes_idx_arr >= this_step_idx) &
+                (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
                 )]
             # subtract current step index to align to each step, and convert to integer index
             MU_spikes_idxs_for_step = (
@@ -463,7 +461,7 @@ def bin_and_count(
             # if spikes are present, set them to 1 for this unit during this step
             if len(MU_spikes_idxs_for_step)!=0:
                 MU_spikes_3d_array_ephys_time[iStep, MU_spikes_idxs_for_step, iUnit] = 1
-            if iUnitKey == '1700' and iStep == 8: set_trace()
+            # if iUnitKey == '1700' and iStep == 14: set_trace()
         # create phase aligned step indexes, with max index for each step set to 2π    
         bin_width_eph_2π = []
         for πStep in range(number_of_steps): # for each step
@@ -473,9 +471,9 @@ def bin_and_count(
             # filter out indexes which are outside the slice or this step_2π's boundaries
             spike_idxs_in_step_2π_and_slice_bounded = MU_spikes_idx_arr[np.where(
                 (MU_spikes_idx_arr < next_step_2π_idx) &
-                (MU_spikes_idx_arr > this_step_2π_idx) &
-                (MU_spikes_idx_arr > (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
-                (MU_spikes_idx_arr < (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
+                (MU_spikes_idx_arr >= this_step_2π_idx) &
+                (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
                 )]
             # coefficient to make step out of 2π radians, step made to be 2π after multiplication
             phase_warp_2π_coeff = 2*np.pi/(
@@ -663,10 +661,12 @@ def raster(
     number_of_steps = MU_spikes_3d_array_ephys_time.shape[0]
     samples_per_step = MU_spikes_3d_array_ephys_time.shape[1]
     number_of_units = MU_spikes_3d_array_ephys_time.shape[2]
+    ch_counter = 0
     unit_counter = 0
     step_counter = 0
     fig = go.Figure()
     # for each channel and each trial's spike time series, plot onto the raster: plotly scatters
+    # for iChan in 
     for iUnit, iUnitKey in enumerate(MU_step_aligned_spike_idxs_dict.keys()):
         for iStep in range(number_of_steps):
             # if number_of_units==2:
@@ -685,6 +685,7 @@ def raster(
             
             step_counter+=1
         unit_counter+=1
+    # ch_counter+=1
     # if number_of_units==2:
     fig.update_layout(
         title_text=

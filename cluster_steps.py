@@ -88,15 +88,15 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
     bodypart_cols = [str for str in reduced_cols if not any(
         sub in str for sub in not_bodypart_substr)]
     body_anipose_data = anipose_data[bodypart_cols]
-    data_nose_aligned = body_anipose_data.copy()
+    data_ref_bodypart_aligned = body_anipose_data.copy()
     for iDim in bodypart_substr:
         body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
         for iCol in body_dim_cols:
-            data_nose_aligned[iCol] = np.sqrt(
+            data_ref_bodypart_aligned[iCol] = np.sqrt(
                 (body_anipose_data["tailbase"+iDim]-body_anipose_data[iCol])**2)
             
     # anipose_steps_data = anipose_data.iloc[step_idx_slice_lst]
-    scaled_data = data_nose_aligned# StandardScaler().fit_transform(data_nose_aligned)
+    scaled_data = data_ref_bodypart_aligned# StandardScaler().fit_transform(data_ref_bodypart_aligned)
     
     # compare methods
     pca_projjer = PCA(n_components=3,random_state=42).fit(scaled_data)

@@ -1,4 +1,4 @@
-from extract_step_idxs import extract_step_idxs
+from process_steps import process_steps
 import pandas as pd
 import numpy as np
 from plotly.offline import iplot
@@ -45,7 +45,8 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 # main function for threshold sorting and producing spike indexes
 def sort(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, anipose_data_dict, bodyparts_list, bodypart_for_alignment,
+    filter_ephys, filter_tracking, anipose_data_dict, 
+    bodyparts_list, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame, do_plot,
     plot_template, MU_colors, CH_colors
@@ -106,17 +107,17 @@ def sort(
     time_axis_for_anipose = np.arange(0,vid_length,1/camera_fps)+ \
                                         time_axis_for_ephys[start_video_capture_ephys_idx]
 
-    # identify motion peak locations of bodypart for step cycle alignment
-    if filter_tracking == True:
-        filtered_signal = butter_highpass_filter(
-            data=chosen_anipose_df[bodypart_for_alignment[0]].values,
-            cutoff=0.5, fs=camera_fps, order=5)
-    else: # do not filter
-        filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
+    # # identify motion peak locations of bodypart for step cycle alignment
+    # if filter_tracking == True:
+    #     filtered_signal = butter_highpass_filter(
+    #         data=chosen_anipose_df[bodypart_for_alignment[0]].values,
+    #         cutoff=0.5, fs=camera_fps, order=5)
+    # else: # do not filter
+    #     filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
 
-    filtered_signal, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = extract_step_idxs(
-    anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
-    filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name,
+    processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = process_steps(
+    anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
+    subtract_bodypart_ref=subtract_bodypart_ref, filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name,
     treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline, camera_fps=camera_fps,
     alignto=alignto, time_frame=time_frame)
     
@@ -239,8 +240,8 @@ def sort(
                 # set_trace()
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[step_time_slice],
-                    y=filtered_signal[step_time_slice], # + 25*bodypart_counter, # 25 mm spread
-                    name=bodyparts_list[bodypart_counter]+' filtered' if filter_tracking
+                    y=processed_anipose_df[bodypart_for_alignment[0]][step_time_slice], # + 25*bodypart_counter, # 25 mm spread
+                    name=bodyparts_list[bodypart_counter]+' processed' if filter_tracking or subtract_bodypart_ref
                         else bodyparts_list[bodypart_counter],
                     mode='lines',
                     opacity=.9,
@@ -250,7 +251,7 @@ def sort(
                 # foot strikes
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[foot_strike_slice_idxs],
-                    y=filtered_signal[foot_strike_slice_idxs],
+                    y=processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],
                     name=bodyparts_list[bodypart_counter]+' strike',
                     mode='markers',
                     marker = dict(color='black'),
@@ -261,7 +262,7 @@ def sort(
                 # foot offs               
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[foot_off_slice_idxs],
-                    y=filtered_signal[foot_off_slice_idxs],
+                    y=processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs],
                     name=bodyparts_list[bodypart_counter]+' off',
                     mode='markers',
                     marker = dict(color='blue'),
@@ -271,15 +272,26 @@ def sort(
                     )
                 bodypart_counter += 1 # increment for each matching bodypart
             else:
-                fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[step_time_slice],
-                    y=values.values, # + 25*bodypart_counter,
-                    name=bodyparts_list[bodypart_counter],
-                    mode='lines',
-                    opacity=.9,
-                    line=dict(width=2)),
-                    row=1, col=1,
-                    )
+                if subtract_bodypart_ref:
+                    fig.add_trace(go.Scatter(
+                        x=time_axis_for_anipose[step_time_slice],
+                        y=processed_anipose_df[name][step_time_slice], # + 25*bodypart_counter,
+                        name=bodyparts_list[bodypart_counter]+' processed',
+                        mode='lines',
+                        opacity=.9,
+                        line=dict(width=2)),
+                        row=1, col=1,
+                        )
+                else:
+                    fig.add_trace(go.Scatter(
+                        x=time_axis_for_anipose[step_time_slice],
+                        y=values.values[step_time_slice], # + 25*bodypart_counter,
+                        name=bodyparts_list[bodypart_counter],
+                        mode='lines',
+                        opacity=.9,
+                        line=dict(width=2)),
+                        row=1, col=1,
+                        )
                 bodypart_counter += 1 # increment for each matching bodypart
     
 
@@ -377,7 +389,8 @@ def sort(
 
 def bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, 
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors
@@ -392,7 +405,7 @@ def bin_and_count(
     ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, _) = sort(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, filter_tracking, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
-        bodypart_for_alignment=bodypart_for_alignment,
+        bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
         session_date=session_date, rat_name=rat_name,
         treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
         camera_fps=camera_fps, alignto=alignto, vid_length=vid_length,
@@ -400,9 +413,9 @@ def bin_and_count(
         plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
         )    
 
-    _, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = extract_step_idxs(
-        anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, filter_tracking=filter_tracking,
-        session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed,
+    _, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = process_steps(
+        anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
+        filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed,
         treadmill_incline=treadmill_incline, camera_fps=camera_fps, alignto=alignto, time_frame=time_frame
         )
 
@@ -635,7 +648,8 @@ def bin_and_count(
 
 def raster(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors
@@ -651,7 +665,8 @@ def raster(
     step_idxs_in_ephys_time, ephys_sample_rate, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
@@ -715,7 +730,8 @@ def raster(
 
 def smooth(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot, phase_align, plot_template, MU_colors, CH_colors
@@ -731,7 +747,8 @@ def smooth(
     step_idxs_in_ephys_time, ephys_sample_rate, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
@@ -820,7 +837,8 @@ def smooth(
     
 def state_space(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict, bodypart_for_alignment,
+    filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, vid_length, time_frame,
     do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors
@@ -829,8 +847,9 @@ def state_space(
     (MU_smoothed_spikes_3d_array, figs
     ) = smooth(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
-        bodypart_for_alignment, session_date, rat_name, treadmill_speed, treadmill_incline,
+        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window,
+        anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+        session_date, rat_name, treadmill_speed, treadmill_incline,
         camera_fps, alignto, vid_length, time_frame, do_plot=False, phase_align=phase_align,
         plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
     

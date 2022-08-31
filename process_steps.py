@@ -1,7 +1,7 @@
 from pdb import set_trace
 import pandas as pd
 import numpy as np
-from scipy.signal import find_peaks, butter, filtfilt
+from scipy.signal import find_peaks, butter, filtfilt, medfilt
 
 def butter_highpass(cutoff, fs, order=2):
     nyq = 0.5 * fs
@@ -15,9 +15,9 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
     return y
 
 # function receives output of import_ephys_data.py as import_anipose_data.py to plot aligned data
-def extract_step_idxs(
-    anipose_data_dict, bodypart_for_alignment, filter_tracking,
-    session_date, rat_name, treadmill_speed, treadmill_incline,
+def process_steps(
+    anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+    filter_tracking, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, alignto, time_frame
     ):
 
@@ -44,18 +44,48 @@ def extract_step_idxs(
         f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
         ]
 
-    # identify motion peak locations for foot strike
-    bodypart_to_filter = bodypart_for_alignment[0]
+    # bodypart_to_filter = bodypart_for_alignment[0]
+    cols = chosen_anipose_df.columns
+    bodypart_substr = ['_x','_y','_z']
+    not_bodypart_substr = ['ref','origin']
+    reduced_cols = [str for str in cols if any(sub in str for sub in bodypart_substr)]
+    bodypart_cols = [str for str in reduced_cols if not any(
+        sub in str for sub in not_bodypart_substr)]
+    bodypart_anipose_df = chosen_anipose_df[bodypart_cols]
+    ref_bodypart_aligned_df = bodypart_anipose_df.copy()
+    for iDim in bodypart_substr:
+        # if iDim == 'Labels': continue # skip if Labels column
+        body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
+        for iCol in body_dim_cols:
+            if subtract_bodypart_ref:
+                ref_bodypart_aligned_df[iCol] = \
+                    bodypart_anipose_df[iCol] - bodypart_anipose_df[bodypart_for_reference[0]+iDim]
+            else:
+                ref_bodypart_aligned_df = bodypart_anipose_df # do not subtract reference
+        
+    x_data = ref_bodypart_aligned_df.columns.str.endswith("_x")
+    y_data = ref_bodypart_aligned_df.columns.str.endswith("_y")
+    z_data = ref_bodypart_aligned_df.columns.str.endswith("_z")
     
-    if filter_tracking == True:
-        filtered_signal = butter_highpass_filter(
-            data=chosen_anipose_df[bodypart_to_filter].values,
+    sorted_body_anipose_df = pd.concat(
+        [ref_bodypart_aligned_df.loc[:,x_data],
+         ref_bodypart_aligned_df.loc[:,y_data],
+         ref_bodypart_aligned_df.loc[:,z_data]],
+        axis=1,ignore_index=False)
+    
+    if filter_tracking == 'highpass':
+        filtered_anipose_data = butter_highpass_filter(
+            data=sorted_body_anipose_df.values,
             cutoff=0.5, fs=camera_fps, order=5)
+    elif filter_tracking == 'median':
+        filtered_anipose_data = medfilt(sorted_body_anipose_df.values, kernel_size=[5,1])
     else: # do not filter
-        filtered_signal=chosen_anipose_df[bodypart_to_filter].values
-    
+        filtered_anipose_data=sorted_body_anipose_df.values
+    processed_anipose_df = pd.DataFrame(filtered_anipose_data,columns=sorted_body_anipose_df.columns)
+    # set_trace()
+    # identify motion peak locations for foot strike
     foot_strike_idxs, _ = find_peaks(
-        filtered_signal,
+        processed_anipose_df[bodypart_for_alignment[0]],
         height=[None,None],
         threshold=None,
         distance=30,
@@ -66,7 +96,7 @@ def extract_step_idxs(
         )
 
     foot_off_idxs, _ = find_peaks(
-        -filtered_signal, # invert signal to find the troughs
+        -processed_anipose_df[bodypart_for_alignment[0]], # invert signal to find the troughs
         height=[None,None],
         threshold=None,
         distance=30,
@@ -126,10 +156,10 @@ def extract_step_idxs(
     
     ## section plots bodypart tracking for the chosen session, for validation
     # import matplotlib.pyplot as plt
-    # plt.plot(filtered_signal)
-    # plt.scatter(step_idxs, filtered_signal[step_idxs],c='r')
+    # plt.plot(filtered_anipose_data)
+    # plt.scatter(step_idxs, filtered_anipose_data[step_idxs],c='r')
     # plt.title(r'Check Peaks for ' + str(bodypart_to_filter))
     # plt.show()
     # print(foot_strike_idxs - foot_off_idxs)
 
-    return filtered_signal, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice
+    return processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice

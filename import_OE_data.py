@@ -75,9 +75,9 @@ def import_OE_data(directory_list):
         for filename in file_list:
             if filename.endswith(".info"):
                 recording_info = filename.split('.')[0]
-                date_only = date_list[iDir].split('_')[0]
-                reformatted_date = datetime.strptime(date_only,"%Y-%m-%d").strftime("%y%m%d")
-                list_of_session_IDs.append(reformatted_date+"_"+recording_info.lower())
+                # date_only = date_list[iDir].split('_')[0]
+                # reformatted_date = datetime.strptime(date_only,"%Y-%m-%d").strftime("%y%m%d")
+                list_of_session_IDs.append(recording_info.lower())
     if len(list_of_session_IDs) == 0:
         raise FileNotFoundError(
         errno.ENOENT, os.strerror(errno.ENOENT), "No '.info' file was found.")

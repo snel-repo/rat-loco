@@ -23,7 +23,6 @@ anipose_directory_list = [
     # '/snel/share/data/anipose/session220606',
     # '/snel/share/data/anipose/session220608',
     '/snel/share/data/anipose/session220715',
-    # '/snel/share/data/anipose/session220715/pose-3d-filtered/session220715',
     ]
 
 ephys_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
@@ -44,7 +43,7 @@ treadmill_speed=4*[20]
 treadmill_incline=[10,15]
 camera_fps=125 #100/125
 vid_length=10 #10/20
-time_frame=[0.05,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
+time_frame=[0,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
 smoothing_window = [10] # bins

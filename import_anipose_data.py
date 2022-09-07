@@ -43,5 +43,5 @@ def import_anipose_data(directory_list):
             list_of_session_IDs.append(csv_file_list[iFile].lower().split('.')[0])
             list_of_pose_3d_dataframes.append(df)
     anipose_data_dict = dict(zip(list_of_session_IDs,list_of_pose_3d_dataframes))
-    #set_trace()
+
     return anipose_data_dict

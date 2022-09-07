@@ -30,7 +30,7 @@ def spike_motion_plot(
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors
     ):
     
@@ -41,7 +41,7 @@ def spike_motion_plot(
         bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
         session_date=session_date, rat_name=rat_name,
         treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
-        camera_fps=camera_fps, alignto=alignto, vid_length=vid_length,
+        camera_fps=camera_fps, align_to=align_to, vid_length=vid_length,
         time_frame=time_frame, do_plot=False, # change T/F whether to plot sorting plots also
         plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors
         )    
@@ -49,7 +49,7 @@ def spike_motion_plot(
     processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = process_steps(
         anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
         filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed,
-        treadmill_incline=treadmill_incline, camera_fps=camera_fps, alignto=alignto, time_frame=time_frame
+        treadmill_incline=treadmill_incline, camera_fps=camera_fps, align_to=align_to, time_frame=time_frame
         )
     #set_trace()
 

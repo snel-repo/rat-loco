@@ -1,4 +1,5 @@
-import import_OE_data, import_anipose_data, process_spikes, cluster_steps, pandas_eda, spike_motion_plot #, plot_loco_ephys
+import import_OE_data, import_anipose_data, process_spikes, process_steps
+import cluster_steps, pandas_eda, spike_motion_plot
 import plotly.io as pio
 import colorlover as cl
 from numpy import pi
@@ -33,7 +34,7 @@ MU_spike_amplitudes_list = [[150.0001,500],[500.0001,1700],[1700.0001,5000]]
 ephys_channel_idxs_list = [13]#[13]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 filter_tracking = False # 'highpass', 'median', or False
-bodyparts_list=['palm_L_z','palm_R_z','mtar_L_z','mtar_R_z'] #['palm_L_y']
+bodyparts_list=['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
 bodypart_for_reference = ['tailbase'] # choose bodypart to use as origin, without _x/_y/_z suffix
 subtract_bodypart_ref = False
@@ -43,7 +44,7 @@ treadmill_speed=4*[20]
 treadmill_incline=[10,15]
 camera_fps=125 #100/125
 vid_length=10 #10/20
-time_frame=[0.1,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
+time_frame=[0.05,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
 smoothing_window = [10] # bins
@@ -52,8 +53,8 @@ align_to='foot off' # "foot strike"/"foot off"
 # align_offset_threshold = 
 
 ### Plotting Parameters
-plot_type = "spike_motion_plot"
-plot_units = [0,1]
+plot_type = "sort"
+plot_units = [0,1,2]
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
@@ -157,7 +158,7 @@ elif plot_type == "spike_motion_plot":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors
     )
 ### functions with prefix "multi" are designed to loop and compare across multiple condtions

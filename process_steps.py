@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.offline import iplot
 from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, medfilt
+from IPython.display import display
 
 def butter_highpass(cutoff, fs, order=2):
     nyq = 0.5 * fs
@@ -154,7 +155,6 @@ def process_steps(
     
     sliced_step_stats = sliced_steps_diff.describe()[0]
     
-    from IPython.display import display
     display(sliced_step_stats)
     
     ## section plots bodypart tracking for the chosen session, for validation

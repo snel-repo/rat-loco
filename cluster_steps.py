@@ -15,7 +15,7 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
     filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
     bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
     session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, alignto, vid_length, time_frame,
+    camera_fps, align_to, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors
     ):
     
@@ -38,7 +38,7 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
                           bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
                           filter_tracking=filter_tracking, session_date=session_date[iPar], rat_name=rat_name[iPar],
                           treadmill_speed=treadmill_speed[iPar], treadmill_incline=treadmill_incline[iPar],
-                          camera_fps=camera_fps, alignto=alignto, time_frame=time_frame)
+                          camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
 
         step_idx_slice_lst.append(step_time_slice)
         i_session_date = session_date[iPar]
@@ -72,9 +72,9 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
         # foot_off_idxs_lst.append(foot_off_idxs)
         
     # choose alignment feature
-    # if alignto == 'foot strike':
+    # if align_to == 'foot strike':
     #     step_idxs = foot_strike_idxs
-    # elif alignto == 'foot off':
+    # elif align_to == 'foot off':
     #     step_idxs = foot_off_idxs
             
     # convert chosen anipose dict into DataFrame        

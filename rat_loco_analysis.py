@@ -27,14 +27,13 @@ anipose_directory_list = [
 
 ephys_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
 anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_list)
-# set_trace()
 
 ### Analysis Parameters
 MU_spike_amplitudes_list = [[150.0001,500],[500.0001,1700],[1700.0001,5000]]
-ephys_channel_idxs_list = [7]#[1,2,3,13,14,16]#[13]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
+ephys_channel_idxs_list = [13]#[13]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 filter_tracking = False # 'highpass', 'median', or False
-bodyparts_list=['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y'] #['palm_L_y']
+bodyparts_list=['palm_L_z','palm_R_z','mtar_L_z','mtar_R_z'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
 bodypart_for_reference = ['tailbase'] # choose bodypart to use as origin, without _x/_y/_z suffix
 subtract_bodypart_ref = False
@@ -49,7 +48,8 @@ bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
 smoothing_window = [10] # bins
 phase_align=False # True/False
-alignto='foot off' # "foot strike"/"foot off"
+align_to='foot off' # "foot strike"/"foot off"
+# align_offset_threshold = 
 
 ### Plotting Parameters
 plot_type = "spike_motion_plot"
@@ -63,7 +63,7 @@ seq_dict_keys = ['Blues', 'BuGn', 'BuPu', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Or
 plot_template = pio.templates.default = 'plotly_white'
 
 ### Define sequential color lists for plot consistency
-N_colors = 4#len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)
+N_colors = 5#len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)
 # CH_colors = cl.to_rgb(cl.interp(plotly.colors.sequential.Jet,16))
 CH_colors = cl.to_rgb(cl.interp(cl.scales['6']['seq']['Greys'],N_colors))[-1:-N_colors:-1] # black to grey, 16
 MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # rainbow scale, 32
@@ -96,7 +96,7 @@ if plot_type == "sort":
         filter_ephys, filter_tracking, anipose_data_dict, 
         bodyparts_list, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "cluster_steps":
     cluster_steps.cluster_steps(
@@ -104,7 +104,7 @@ elif plot_type == "cluster_steps":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "bin_and_count":
     process_spikes.bin_and_count(
@@ -112,7 +112,7 @@ elif plot_type == "bin_and_count":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "raster":
     process_spikes.raster(
@@ -120,7 +120,7 @@ elif plot_type == "raster":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
 elif plot_type == "smooth":
     process_spikes.smooth(
@@ -128,7 +128,7 @@ elif plot_type == "smooth":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, phase_align, plot_template, MU_colors, CH_colors)
 elif plot_type == "state_space":
     process_spikes.state_space(
@@ -136,7 +136,7 @@ elif plot_type == "state_space":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[0], anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors)
 elif plot_type == "pandas_eda":
     pandas_eda.pandas_eda(
@@ -144,8 +144,13 @@ elif plot_type == "pandas_eda":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
+elif plot_type == "behavioral_space":
+    process_steps.behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
+                           subtract_bodypart_ref, bodyparts_list, filter_tracking, session_date, rat_name,
+                           treadmill_speed, treadmill_incline, camera_fps, align_to, time_frame,
+                           MU_colors, CH_colors)
 elif plot_type == "spike_motion_plot":
     spike_motion_plot.spike_motion_plot(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
@@ -170,7 +175,7 @@ elif plot_type == "multi_bin":
             filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
             bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
             session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
-            camera_fps, alignto, vid_length, time_frame,
+            camera_fps, align_to, vid_length, time_frame,
             do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
         for iHist in range(len(figs[0].data)):
             big_fig.add_trace(figs[0].data[iHist], row=iRec+1,
@@ -207,7 +212,7 @@ elif plot_type == "multi_count":
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
         session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
-        camera_fps, alignto, vid_length, time_frame,
+        camera_fps, align_to, vid_length, time_frame,
         do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
         for iHist in range(len(figs[1].data)):
             big_fig.add_trace(figs[1].data[iHist], row=1, col=iRec+1)
@@ -237,7 +242,7 @@ elif plot_type == "multi_smooth":
             filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, smoothing_window[iSmooth], anipose_data_dict,
             bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
             session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
-            camera_fps, alignto, vid_length, time_frame,
+            camera_fps, align_to, vid_length, time_frame,
             do_plot=False, phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
         for iPlot in range(len(figs[0].data)):
             big_fig.add_trace(figs[0].data[iPlot], row=iSmooth+1,

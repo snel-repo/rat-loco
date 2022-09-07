@@ -5,7 +5,7 @@ from open_ephys.analysis import Session
 from datetime import datetime
 # import matplotlib.pyplot as plt
 # import pandas as pd
-# from pdb import set_trace
+from pdb import set_trace
 # from scipy.signal import find_peaks, filtfilt, iirnotch
 
 # # create a notch filter for powerline removal at 60Hz
@@ -44,6 +44,7 @@ def import_OE_data(directory_list):
             # create list of session dates for the ones that were extracted
             date_list.append(session.recordnodes[0].directory.split('/')[-2]) # grab the date out of the path
             recording_path_list.append(session.recordnodes[0].recordings[iExperiment].directory)
+            # set_trace()
             continuous_ephys_data_list[iRecording][0].samples = np.array(continuous_ephys_data_list[iRecording][0].samples,dtype='float32')
 
             for iChannel in range(session.recordnodes[0].recordings[iExperiment].info['continuous'][0]['num_channels']):
@@ -75,9 +76,9 @@ def import_OE_data(directory_list):
         for filename in file_list:
             if filename.endswith(".info"):
                 recording_info = filename.split('.')[0]
-                date_only = date_list[iDir].split('_')[0]
-                reformatted_date = datetime.strptime(date_only,"%Y-%m-%d").strftime("%y%m%d")
-                list_of_session_IDs.append(reformatted_date+"_"+recording_info.lower())
+                # date_only = date_list[iDir].split('_')[0]
+                # reformatted_date = datetime.strptime(date_only,"%Y-%m-%d").strftime("%y%m%d")
+                list_of_session_IDs.append(recording_info.lower())
     if len(list_of_session_IDs) == 0:
         raise FileNotFoundError(
         errno.ENOENT, os.strerror(errno.ENOENT), "No '.info' file was found.")
@@ -88,6 +89,7 @@ def import_OE_data(directory_list):
         # remove unnecessary extra list dimension and convert to numpy.ndarray
         continuous_ephys_data_list = np.squeeze(continuous_ephys_data_list).tolist() 
     ephys_data_dict = dict(zip(list_of_session_IDs,continuous_ephys_data_list))
+    #set_trace()
     return ephys_data_dict
 
 ## section for testing a specific directory without other 

@@ -1,7 +1,7 @@
 import os
 import os.path
 import pandas as pd
-
+from pdb import set_trace
 
 def _read_pose_3d_data(path_to_pose_3d_csv):
     print(f"Reading file(s) into DataFrame: {path_to_pose_3d_csv.name}")
@@ -40,7 +40,8 @@ def import_anipose_data(directory_list):
         [csv_file_list.append(file_list[iFile]) for iFile in range(len(file_list)) if file_list[iFile].endswith('.csv')]
         for iFile, df in enumerate(_read_all_csv_files(directory_path)):
             # add date string to filename, apply lowercase, remove '.csv' suffix, then append to list
-            list_of_session_IDs.append(date_list[iDir]+"_"+csv_file_list[iFile].lower().split('.')[0])
+            list_of_session_IDs.append(csv_file_list[iFile].lower().split('.')[0])
             list_of_pose_3d_dataframes.append(df)
     anipose_data_dict = dict(zip(list_of_session_IDs,list_of_pose_3d_dataframes))
+    #set_trace()
     return anipose_data_dict

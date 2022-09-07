@@ -1,4 +1,4 @@
-import import_OE_data, import_anipose_data, process_spikes, cluster_steps, pandas_eda #, plot_loco_ephys
+import import_OE_data, import_anipose_data, process_spikes, cluster_steps, pandas_eda, spike_motion_plot #, plot_loco_ephys
 import plotly.io as pio
 import colorlover as cl
 from numpy import pi
@@ -8,42 +8,43 @@ from pdb import set_trace
 ### Chosen Directories
 # ephys directory(ies) that should have 'Record Node ###' inside it
 ephys_directory_list = [
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-03_19-41-47',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-21-22',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_15-45-13',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-06_16-01-57',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-06-08_14-14-30',
-    '/home/sean/hdd/GTE-BME/SNEL/data/OpenEphys/treadmill/2022-07-15_15-16-47',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-03_19-41-47',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-21-22',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-45-13',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
     ]
 
 # anipose directory(ies) that should have pose_3d.csv inside it
 anipose_directory_list = [
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220603',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220606',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220608',
-    '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220715',
-    # '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220715/pose-3d-filtered/session220715',
+    '/snel/share/data/anipose/session220603',
+    # '/snel/share/data/anipose/session220606',
+    # '/snel/share/data/anipose/session220608',
+    '/snel/share/data/anipose/session220715',
+    # '/snel/share/data/anipose/session220715/pose-3d-filtered/session220715',
     ]
 
 ephys_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
 anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_list)
+# set_trace()
 
 ### Analysis Parameters
 MU_spike_amplitudes_list = [[150.0001,500],[500.0001,1700],[1700.0001,5000]]
-ephys_channel_idxs_list = [13]#[1,2,3,13,14,16]#[13]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
+ephys_channel_idxs_list = [7]#[1,2,3,13,14,16]#[13]#[1,2,3,4,13,14,16]#[0,4,5,6,7,8,9,10,11,12,15] #[1,2,3,4,6,8,9,13,14,16]#,6,8,13,14,16]#[7] #[0,1,2,4,5,7,8,9,11,13,15,16]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 filter_tracking = False # 'highpass', 'median', or False
 bodyparts_list=['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
 bodypart_for_reference = ['tailbase'] # choose bodypart to use as origin, without _x/_y/_z suffix
-subtract_bodypart_ref = True
-session_date=4*[220715]#3*[220603]#
-rat_name=4*['cleopatra']#3*['dogerat']
+subtract_bodypart_ref = False
+session_date=4*[220715] #3*[220603]#4*[220715]
+rat_name=4*['cleopatra'] #3*['dogerat'] #4*['cleopatra']
 treadmill_speed=4*[20]
-treadmill_incline=[0,5,10,15]
-camera_fps=125#100
-vid_length=10#20
-time_frame=[0,.333] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
+treadmill_incline=[10,15]
+camera_fps=125 #100/125
+vid_length=10 #10/20
+time_frame=[0.1,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=10
 bin_width_radian=(2*pi)/50 # leave 2*pi numerator and set denominator as number of bins
 smoothing_window = [10] # bins
@@ -51,7 +52,7 @@ phase_align=False # True/False
 alignto='foot off' # "foot strike"/"foot off"
 
 ### Plotting Parameters
-plot_type = "pandas_eda"
+plot_type = "spike_motion_plot"
 plot_units = [0,1]
 do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
@@ -145,6 +146,15 @@ elif plot_type == "pandas_eda":
         session_date, rat_name, treadmill_speed, treadmill_incline,
         camera_fps, alignto, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors)
+elif plot_type == "spike_motion_plot":
+    spike_motion_plot.spike_motion_plot(
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+        bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+        session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+        camera_fps, alignto, vid_length, time_frame,
+        do_plot, plot_template, MU_colors, CH_colors
+    )
 ### functions with prefix "multi" are designed to loop and compare across multiple condtions
 # multi_bin performs binning of spikes, plots results for all chosen conditions
 elif plot_type == "multi_bin":

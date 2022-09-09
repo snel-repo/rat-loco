@@ -20,7 +20,7 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 
 # function receives output of import_ephys_data.py as import_anipose_data.py to plot aligned data
 def process_steps(
-    anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+    anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
     filter_tracking, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, time_frame
     ):
@@ -56,25 +56,37 @@ def process_steps(
     bodypart_cols = [str for str in reduced_cols if not any(
         sub in str for sub in not_bodypart_substr)]
     bodypart_anipose_df = chosen_anipose_df[bodypart_cols]
-    ref_bodypart_aligned_df = bodypart_anipose_df.copy()
+    ref_aligned_df = bodypart_anipose_df.copy()
     for iDim in bodypart_substr:
         # if iDim == 'Labels': continue # skip if Labels column
         body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
-        for iCol in body_dim_cols:
-            if subtract_bodypart_ref:
-                ref_bodypart_aligned_df[iCol] = \
+        if subtract_bodypart_ref:
+            for iCol in body_dim_cols:
+                ref_aligned_df[iCol] = \
                     bodypart_anipose_df[iCol] - bodypart_anipose_df[bodypart_for_reference[0]+iDim]
+        else:
+            # iDim_cols = [str for str in bodypart_cols if str in [iDim]]
+            if type(origin_offsets[iDim[-1]]) is int:
+                ref_aligned_df[body_dim_cols] = \
+                    bodypart_anipose_df[body_dim_cols]+origin_offsets[iDim[-1]]
+            elif type(origin_offsets[iDim[-1]]) is list and type(origin_offsets[iDim[-1]][0]) is str:
+                for iCol in body_dim_cols:
+                    ref_aligned_df[iCol] = \
+                        bodypart_anipose_df[iCol] - bodypart_anipose_df[bodypart_for_reference[0]+iDim]
             else:
-                ref_bodypart_aligned_df = bodypart_anipose_df # do not subtract reference
-        
-    x_data = ref_bodypart_aligned_df.columns.str.endswith("_x")
-    y_data = ref_bodypart_aligned_df.columns.str.endswith("_y")
-    z_data = ref_bodypart_aligned_df.columns.str.endswith("_z")
+                raise TypeError('origin_offsets variable must be either type `int`, or set as `bodypart_for_reference` (variable which is a string inside a list)')
+            # ref_aligned_df = bodypart_anipose_df # do not subtract any reference
+            # ref_aligned_df[iCol] = \
+            #     bodypart_anipose_df[iCol] + bodypart_anipose_df[bodypart_for_reference[0]+iDim] # add measured offsets
+
+    x_data = ref_aligned_df.columns.str.endswith("_x")
+    y_data = ref_aligned_df.columns.str.endswith("_y")
+    z_data = ref_aligned_df.columns.str.endswith("_z")
     
     sorted_body_anipose_df = pd.concat(
-        [ref_bodypart_aligned_df.loc[:,x_data],
-         ref_bodypart_aligned_df.loc[:,y_data],
-         ref_bodypart_aligned_df.loc[:,z_data]],
+        [ref_aligned_df.loc[:,x_data],
+         ref_aligned_df.loc[:,y_data],
+         ref_aligned_df.loc[:,z_data]],
         axis=1,ignore_index=False)
     
     if filter_tracking == 'highpass':
@@ -167,14 +179,14 @@ def process_steps(
     # set_trace()
     return processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice
 
-def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
     filter_tracking, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, time_frame):
     
     (processed_anipose_df, foot_strike_idxs, foot_off_idxs,
      sliced_step_stats, step_slice, step_time_slice
      ) = process_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
-                       subtract_bodypart_ref, filter_tracking, session_date, rat_name,
+                       subtract_bodypart_ref, origin_offsets, filter_tracking, session_date, rat_name,
                        treadmill_speed, treadmill_incline, camera_fps, align_to, time_frame)
     
     # get column titles
@@ -209,26 +221,29 @@ def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_refer
     return trialized_anipose_df, pre_align_offset, post_align_offset, step_idxs
 
 def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
-                     subtract_bodypart_ref, bodyparts_list, filter_tracking, session_date,
+                     subtract_bodypart_ref, origin_offsets, bodyparts_list, filter_tracking, session_date,
                      rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to,
                      time_frame, MU_colors, CH_colors):
     
     iPar = 0
     session_parameters_lst = []
     trialized_anipose_dfs_lst = []
+    subtitles = []
+    for iTitle in treadmill_incline:
+        subtitles.append("<b>Incline: "+str(iTitle)+"</b>")
     fig1 = go.Figure()
     fig2 = make_subplots(
-        rows=len(treadmill_incline), cols=len(bodyparts_list),
+        rows=len(bodyparts_list), cols=len(treadmill_incline),
         shared_xaxes=True,
-        # shared_yaxes=True,
-        subplot_titles=(bodyparts_list)
+        shared_yaxes='rows',
+        subplot_titles=subtitles
         )
         # f"<b>Locomotion Kinematics: {list(chosen_anipose_data_dict.keys())[0]}</b>",
         # f"<b>Neural Activity: {list(chosen_ephys_data_dict.keys())[0]}</b>"
     for iPar in range(len(treadmill_incline)):
         trialized_anipose_df, pre_align_offset, post_align_offset, step_idxs = \
             trialize_steps(anipose_data_dict, bodypart_for_alignment,
-                           bodypart_for_reference, subtract_bodypart_ref,
+                           bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
                            filter_tracking, session_date[iPar], rat_name[iPar],
                            treadmill_speed[iPar], treadmill_incline[iPar],
                            camera_fps, align_to, time_frame)
@@ -242,11 +257,6 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         trialized_anipose_dfs_lst.append(trialized_anipose_df)
         trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
                                 np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
-        # cols = trialized_anipose_df.columns
-    
-        # grr_X=anipose_df_all_inclines.loc[:,X_data_labels].plot.scatter(c=Labels, alpha=.6, figsize=(15, 15))
-        # grr_Y=anipose_df_all_inclines.loc[:,Y_data_labels].plot.scatter(c=Labels, alpha=.6, figsize=(15, 15))
-        # grr_Z=anipose_df_all_inclines.loc[:,Z_data_labels].plot.scatter(c=Labels, alpha=.6, figsize=(15, 15))
         
         # get trial averages by filtering for all columns that match
         trial_ave_lst = []
@@ -266,7 +276,7 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
             mode='markers', marker_line_color="black", marker_color=CH_colors[int(i_treadmill_incline)//5],
             marker_line_width=2, marker_size=15, marker_symbol='asterisk', name=f'incline{i_treadmill_incline} start',
             ))
-        # set_trace()
+
         # plot single trajectories
         for iBodypart in range(len(bodyparts_list)):
             anipose_bodypart_trials = trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).to_numpy()
@@ -278,23 +288,20 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
                     opacity=.9,
                     line_color=MU_colors[int(i_treadmill_incline)//5],
                     line=dict(width=2)),
-                    row=iPar+1, col=iBodypart+1
+                    col=iPar+1, row=iBodypart+1
                     )
             fig2.add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
         
-    set_trace()
+    # set_trace()
     # Edit the layout
     fig1.update_layout(title=f'<b>Behavioral State Space Across {bodyparts_list[0]} and {bodyparts_list[1]}, Trial Averages</b>',
                    xaxis_title='<b>'+bodyparts_list[0]+' mean</b>',
-                   yaxis_title='<b>'+bodyparts_list[1]+' mean</b>'
-                   )
-    
+                   yaxis_title='<b>'+bodyparts_list[1]+' mean</b>')
     fig1.update_yaxes(scaleanchor = "x",scaleratio = 1)
-    
-    fig2.update_xaxes(title_text='', row = 1, col = 1)
-    fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = 1)
-    for ii, iTitle in enumerate(treadmill_incline):
-        fig2.update_yaxes(title_text="<b>Incline"+str(iTitle)+"</b>", row = ii+1, col = 1)
+    for xx in range(len(treadmill_incline)):
+        fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = xx+1)
+    for yy, yTitle in enumerate(bodyparts_list):
+        fig2.update_yaxes(title_text="<b>"+str(yTitle)+" (mm)</b>", row = yy+1, col = 1)
     # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
     # fig2.update_yaxes(matches='y')
     

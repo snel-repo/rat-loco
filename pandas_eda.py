@@ -18,7 +18,7 @@ import colorlover as cl
 def pandas_eda(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors):
@@ -32,7 +32,7 @@ def pandas_eda(
         processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = \
                 process_steps(anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
                               bodypart_for_reference=bodypart_for_reference, 
-                              subtract_bodypart_ref=subtract_bodypart_ref,
+                              subtract_bodypart_ref=subtract_bodypart_ref, origin_offsets=origin_offsets,
                               filter_tracking=filter_tracking, session_date=session_date[iPar],
                               rat_name=rat_name[iPar], treadmill_speed=treadmill_speed[iPar], 
                               treadmill_incline=treadmill_incline[iPar], camera_fps=camera_fps,

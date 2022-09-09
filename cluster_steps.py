@@ -13,7 +13,7 @@ import umap.plot
 
 def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+    bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
     session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors
@@ -35,8 +35,9 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
     for iPar in range(len(treadmill_incline)):
         _, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = \
             process_steps(anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
-                          bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
-                          filter_tracking=filter_tracking, session_date=session_date[iPar], rat_name=rat_name[iPar],
+                          bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref, 
+                          origin_offsets=origin_offsets, filter_tracking=filter_tracking,
+                          session_date=session_date[iPar], rat_name=rat_name[iPar],
                           treadmill_speed=treadmill_speed[iPar], treadmill_incline=treadmill_incline[iPar],
                           camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
 
@@ -50,32 +51,6 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
         chosen_anipose_dfs_lst.append(anipose_data_dict[session_parameters_lst[iPar]])
         chosen_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
                                 np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
-        # foot_strike_slice_idxs = [
-        #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
-        #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
-        #     ]
-        # foot_off_slice_idxs = [
-        #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[0])], # subtract last step (-1)
-        #     foot_off_idxs[int((sliced_step_stats['count']-1)*time_frame[1])]  # & round to nearest step
-        #     ]
-        # all_step_idx.append([])
-        # if foot_strike_slice_idxs[0]<foot_off_slice_idxs[0]:
-        #     all_step_idx[-1].append(foot_strike_slice_idxs[0])
-        # else:
-        #     all_step_idx[-1].append(foot_off_slice_idxs[0])
-        # if foot_strike_slice_idxs[1]>foot_off_slice_idxs[1]:
-        #     all_step_idx[-1].append(foot_strike_slice_idxs[1])
-        # else:
-        #     all_step_idx[-1].append(foot_off_slice_idxs[1])
-        # step_idx_slice_lst.append(slice(all_step_idx[-1][0],all_step_idx[-1][1]))
-        # foot_strike_idxs_lst.append(foot_strike_idxs)
-        # foot_off_idxs_lst.append(foot_off_idxs)
-        
-    # choose alignment feature
-    # if align_to == 'foot strike':
-    #     step_idxs = foot_strike_idxs
-    # elif align_to == 'foot off':
-    #     step_idxs = foot_off_idxs
             
     # convert chosen anipose dict into DataFrame        
     cols = chosen_anipose_dfs_lst[0].columns
@@ -108,21 +83,7 @@ def cluster_steps(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_
     # pca_proj_df = pd.DataFrame(pca_proj)
     iso_embed = isomap_mapper.transform(scaled_data)
     # ios_embed_df = pd.DataFrame(iso_embed)
-
-    # plt.jet()
-    # pca_fig = plt.figure()
-    # pca_ax = pca_fig.add_subplot(projection='3d')
-
-    # pca_ax.scatter(pca_proj[:,0],pca_proj[:,1],pca_proj[:,2],
-    #                       c=anipose_data['Labels'],
-    #                       label=anipose_data['Labels'],
-    #                       alpha=0.4)
-    # pca_ax.set_title('pca')
-    # pca_ax.set_xlabel('PC 1')
-    # pca_ax.set_ylabel('PC 2')
-    # pca_ax.set_zlabel('PC 3')
-    # plt.show(pca_fig)
-    
+  
     pca_go = go.Figure()
     last_len = 0
     for ii, df in enumerate(trimmed_anipose_dfs_lst):

@@ -28,7 +28,7 @@ def line_draw(num, dataSet, line):
 def spike_motion_plot(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
-        bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref,
+        bodypart_for_alignment, bodypart_for_reference, subtract_bodypart_ref, origin_offsets,
         session_date, rat_name, treadmill_speed, treadmill_incline,
         camera_fps, align_to, vid_length, time_frame,
         do_plot, plot_template, MU_colors, CH_colors
@@ -38,7 +38,7 @@ def spike_motion_plot(
     ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, _) = sort(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, filter_tracking, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
-        bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
+        bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref, origin_offsets=origin_offsets,
         session_date=session_date, rat_name=rat_name,
         treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
         camera_fps=camera_fps, align_to=align_to, vid_length=vid_length,
@@ -47,7 +47,7 @@ def spike_motion_plot(
         )    
 
     processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = process_steps(
-        anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref,
+        anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, subtract_bodypart_ref=subtract_bodypart_ref, origin_offsets=origin_offsets,
         filter_tracking=filter_tracking, session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed,
         treadmill_incline=treadmill_incline, camera_fps=camera_fps, align_to=align_to, time_frame=time_frame
         )

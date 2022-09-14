@@ -3,7 +3,7 @@ import os
 import stackvids
 
 
-def stackallvids(stack_type='hstack', destination='.', num_cams=4):
+def stackallvids(stack_type='xstack', destination='.', num_cams=4):
      # get all unique base filenames, and write that to a file
      os.system("find ./ -type f -printf '%f\n' | sort | grep mp4 | sed s/_cam.....$// | uniq > unique_video_names.txt")
      with open('unique_video_names.txt','r') as unique_video_names:

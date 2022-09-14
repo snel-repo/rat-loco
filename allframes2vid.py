@@ -2,9 +2,9 @@ import sys
 import os
 import frames2vid
 
-def allframes2vid(num_frames, downsampling_factor=2, destination='.', framerate=100, num_cams=4):
+def allframes2vid(num_frames, downsampling_factor=1, destination='.', framerate=125, num_cams=4):
      # get all unique base filenames, and write that to a file
-     os.system("find ./ -type f -printf '%f\n' | sort | grep jpg | sed s/_[0-9]*_cam.....$// | uniq > unique_base_filenames.txt")
+     os.system("find ./ -type f -printf '%f\n' | sort | grep jpg | sed s/_[0-9]*_cam.....$// | sort | uniq > unique_base_filenames.txt")
      with open('unique_base_filenames.txt','r') as unique_base_filenames:
           # read in each line into a list, without any extra \n characters
           unique_base_filenames_list = unique_base_filenames.read().splitlines()

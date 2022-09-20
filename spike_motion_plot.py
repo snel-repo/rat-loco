@@ -25,7 +25,7 @@ def line_draw(num, dataSet, line):
 
 def spike_motion_plot(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, filter_tracking, bin_width_ms, bin_width_radian, anipose_data_dict,
+        filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, origin_offsets,
         session_date, rat_name, treadmill_speed, treadmill_incline,
         camera_fps, align_to, vid_length, time_frame,
@@ -35,7 +35,7 @@ def spike_motion_plot(
     (MU_spikes_by_channel_dict, time_axis_for_ephys, time_axis_for_anipose,
     ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, _) = sort(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, filter_tracking, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
+        filter_ephys, filter_all_anipose, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
         bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
         bodypart_ref_filter=bodypart_ref_filter, origin_offsets=origin_offsets, session_date=session_date, rat_name=rat_name,
         treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
@@ -46,7 +46,7 @@ def spike_motion_plot(
 
     processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = peak_align_and_filt(
         anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
-        bodypart_ref_filter=bodypart_ref_filter, origin_offsets=origin_offsets, filter_tracking=filter_tracking,
+        bodypart_ref_filter=bodypart_ref_filter, origin_offsets=origin_offsets, filter_all_anipose=filter_all_anipose,
         session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
         camera_fps=camera_fps, align_to=align_to, time_frame=time_frame
         )

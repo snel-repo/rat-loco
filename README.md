@@ -8,7 +8,10 @@
 2. Create a `conda` environment
     - `conda create -n ratloco python==3.10`
 
-3. Install required packages with `pip`
+3. Activate the new environment
+    - `conda activate ratloco`
+
+4. Install required packages with `pip`
     - `pip install -r requirements.txt`
     
 
@@ -17,7 +20,7 @@
 
 2. Open `rat_loco_analysis.py` in your favorite code editor (e.g. VSCode). The `rat_loco_analysis.py` python script serves as a config file and the main caller of all other subfunctions contained in separate python scripts (other `.py` files in the repo).
 
-3. Make sure the directory paths actually point to the correct data folders which contain the `.csv` files for anipose data, and the `Record Node ###` folder for the Open Ephys data.
+3. Make sure the directory paths actually point to the correct data folders which contain the `.csv` files for anipose data, and the folder which contains the `Record Node ###` folder for the Open Ephys data path.
 
 4. Open the terminal inside the `rat-loco` repo folder and execute: `python rat_loco_analysis.py`
 

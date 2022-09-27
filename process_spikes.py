@@ -400,7 +400,7 @@ def sort(
 def bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, do_plot, plot_template, MU_colors, CH_colors
     ):
@@ -431,9 +431,9 @@ def bin_and_count(
 
     (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
      step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
-     post_align_offset, trial_reject_bounds_mm) = trialize_steps(
+     post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
         anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-        trial_reject_bounds_mm, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
+        trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
         rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to, time_frame)
     
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
@@ -668,14 +668,14 @@ def bin_and_count(
         MU_spikes_3d_array_ephys_time,
         MU_spikes_3d_array_binned,
         MU_spikes_3d_array_binned_2π,
-        MU_spikes_count_across_all_steps,
+        MU_spikes_count_across_all_steps, steps_to_keep_arr,
         step_idxs_in_ephys_time, ephys_sample_rate, figs
     )
 
 def raster(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame,
     do_plot, plot_template, MU_colors, CH_colors
@@ -687,12 +687,12 @@ def raster(
     MU_spikes_3d_array_ephys_time,
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
-    MU_spikes_count_across_all_steps,
+    MU_spikes_count_across_all_steps, steps_to_keep_arr,
     step_idxs_in_ephys_time, ephys_sample_rate, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame,
     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
@@ -758,7 +758,7 @@ def smooth(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
     anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-    trial_reject_bounds_mm, origin_offsets, bodyparts_list, session_date, rat_name,
+    trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
     treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,
     do_plot, phase_align, plot_template, MU_colors, CH_colors):
     
@@ -768,12 +768,12 @@ def smooth(
     MU_spikes_3d_array_ephys_time,
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
-    MU_spikes_count_across_all_steps,
+    MU_spikes_count_across_all_steps, steps_to_keep_arr,
     step_idxs_in_ephys_time, ephys_sample_rate, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
     filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
-    bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, origin_offsets,
+    bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets,
     bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline, camera_fps,
     align_to, vid_length, time_frame, do_plot=False, plot_template=plot_template,
     MU_colors=MU_colors, CH_colors=CH_colors)
@@ -847,7 +847,7 @@ def smooth(
     # put in a list for compatibility with calling functions
     figs = [fig]
     
-    return MU_smoothed_spikes_3d_array, figs
+    return MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs
             # df_cols_list.append(f'step{iStep}_unit{iUnit}')
     # transpose 3d array to allow flattening pages of the 3d data into Steps x (Bins*Units)
     # MU_smoothed_spikes_3d_array_T = MU_smoothed_spikes_3d_array.T(1,2,0)
@@ -862,23 +862,22 @@ def smooth(
 def state_space(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
     filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, do_plot, plot_units, phase_align, plot_template,
     MU_colors, CH_colors):
     
-    (MU_smoothed_spikes_3d_array, figs
-    ) = smooth(
+    (MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs) = smooth(
         ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
         filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-        trial_reject_bounds_mm,origin_offsets, bodyparts_list, session_date, rat_name,
+        trial_reject_bounds_mm, trial_reject_bounds_sec,origin_offsets, bodyparts_list, session_date, rat_name,
         treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,
         do_plot=False, phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
         CH_colors=CH_colors)
     
-    session_parameters = \
-        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    # session_parameters = \
+    #     f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # select units for plotting
     sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
@@ -900,7 +899,7 @@ def state_space(
     
     fig = go.Figure()
     # smooth and plot each trace
-    for iStep in range(number_of_steps):
+    for iStep, true_step in enumerate(steps_to_keep_arr):
         # gaussian smooth across time, with standard deviation value of bin_width_ms
         sliced_MU_smoothed_3d_array[iStep,:,:] = gaussian_filter1d(
             sliced_MU_smoothed_3d_array[iStep,:,:],
@@ -911,7 +910,7 @@ def state_space(
             fig.add_trace(go.Scatter(
                 x=sliced_MU_smoothed_3d_array[iStep,:,0],
                 y=sliced_MU_smoothed_3d_array[iStep,:,1],
-                name=f'step{iStep}',
+                name=f'step{true_step}',
                 mode='lines',
                 opacity=.5,
                 line=dict(width=5,color=MU_colors[treadmill_incline//5],dash='solid')
@@ -921,7 +920,7 @@ def state_space(
                 x=sliced_MU_smoothed_3d_array[iStep,:,0],
                 y=sliced_MU_smoothed_3d_array[iStep,:,1],
                 z=sliced_MU_smoothed_3d_array[iStep,:,2],
-                name=f'step{iStep}',
+                name=f'step{true_step}',
                 mode='lines',
                 opacity=.5,
                 line=dict(width=8,color=MU_colors[treadmill_incline//5],dash='solid')
@@ -977,97 +976,161 @@ def state_space(
         iplot(fig)
     # put in a list for compatibility with calling functions
     figs = [fig]
-    return figs
+    return MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs
 
-# def MU_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-#             trial_reject_bounds_mm, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
-#             rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to,
-#             time_frame, MU_colors, CH_colors):
+def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
+    filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
+    origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
+    camera_fps, align_to, vid_length, time_frame, do_plot, plot_units, phase_align, plot_template,
+    MU_colors, CH_colors):
     
-#     iPar = 0
-#     session_parameters_lst = []
-#     trialized_anipose_dfs_lst = []
-#     subtitles = []
-#     for iTitle in treadmill_incline:
-#         subtitles.append("<b>Incline: "+str(iTitle)+"</b>")
-#     fig1 = go.Figure()
-#     fig2 = make_subplots(
-#         rows=len(bodyparts_list), cols=len(treadmill_incline),
-#         shared_xaxes=True,
-#         shared_yaxes='rows',
-#         subplot_titles=subtitles
-#         )
-#         # f"<b>Locomotion Kinematics: {list(chosen_anipose_data_dict.keys())[0]}</b>",
-#         # f"<b>Neural Activity: {list(chosen_ephys_data_dict.keys())[0]}</b>"
-#     for iPar in range(len(treadmill_incline)):
-#         (trialized_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice,
-#         step_time_slice, ref_bodypart_trace_list, pre_align_offset, post_align_offset, trial_reject_bounds_mm) = \
-#             trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-#                             trial_reject_bounds_mm, origin_offsets, bodyparts_list,
-#                             filter_all_anipose, session_date[iPar], rat_name[iPar], treadmill_speed[iPar],
-#                             treadmill_incline[iPar], camera_fps, align_to, time_frame)
+    iPar = 0
+    # session_parameters_lst = []
+    # trialized_anipose_dfs_lst = []
+    subtitles = []
+    for iTitle in treadmill_incline:
+        subtitles.append("<b>Incline: "+str(iTitle)+"</b>")
         
-#         i_session_date = session_date[iPar]
-#         i_rat_name = str(rat_name[iPar]).lower()
-#         i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
-#         i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
-#         session_parameters_lst.append(
-#             f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}")
-#         trialized_anipose_dfs_lst.append(trialized_anipose_df)
-#         trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
-#                                 np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
+    big_fig = []
+    for iPar in range(len(treadmill_incline)):
+        (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
+         step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset, post_align_offset,
+        trial_reject_bounds_mm, trial_reject_bounds_sec) = \
+            trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
+                           bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
+                           origin_offsets, bodyparts_list, filter_all_anipose, session_date[iPar],
+                           rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar],
+                           camera_fps, align_to, time_frame)
         
-#         # get trial averages by filtering for all columns that match
-#         trial_ave_lst = []
-#         for iBodypart in range(len(bodyparts_list)):
-#             trial_ave_lst.append(trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).mean(axis=1))
+        # (MU_smoothed_spikes_3d_array, binned_spike_array, figs) = smooth(
+        # ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
+        # filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+        # bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
+        # trial_reject_bounds_mm, trial_reject_bounds_sec,origin_offsets, bodyparts_list,
+        # session_date[iPar], rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar],
+        # camera_fps, align_to, vid_length, time_frame, do_plot=False, phase_align=phase_align,
+        # plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
 
-#         # plot trial averages across inclines
-#         fig1.add_trace(go.Scatter(
-#             x=trial_ave_lst[0],
-#             y=trial_ave_lst[1] if len(trial_ave_lst)>1 else trial_ave_lst[0],
-#             mode='lines', name=f'incline{i_treadmill_incline}',
-#             line_color=MU_colors[int(i_treadmill_incline)//5]
-#             ))
-#         fig1.add_trace(go.Scatter(
-#             x=[trial_ave_lst[0][0]],
-#             y=[trial_ave_lst[1][0] if len(trial_ave_lst)>1 else trial_ave_lst[0][0]],
-#             mode='markers', marker_line_color="black", marker_color=CH_colors[int(i_treadmill_incline)//5],
-#             marker_line_width=2, marker_size=15, marker_symbol='asterisk', name=f'incline{i_treadmill_incline} start',
-#             ))
+        MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs = \
+            state_space(ephys_data_dict,ephys_channel_idxs_list, MU_spike_amplitudes_list,
+                    filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian,
+                    smoothing_window, anipose_data_dict, bodypart_for_alignment,
+                    bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
+                    trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date[iPar],
+                    rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar], camera_fps,
+                    align_to, vid_length, time_frame, do_plot=False, plot_units=plot_units,
+                    phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
+                    CH_colors=CH_colors)
 
-#         # plot single trajectories
-#         for iBodypart in range(len(bodyparts_list)):
-#             anipose_bodypart_trials = trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).to_numpy()
-#             data_col_names = trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).columns
-#             for (iTrial, iName) in zip(anipose_bodypart_trials.T, data_col_names):
-#                 fig2.add_trace(go.Scatter(
-#                     x=np.linspace(-pre_align_offset/camera_fps, post_align_offset/camera_fps,len(iTrial)),
-#                     y=iTrial,
-#                     mode='lines', name=iName,
-#                     opacity=.9,
-#                     line_color=MU_colors[int(i_treadmill_incline)//5],
-#                     line=dict(width=2)),
-#                     col=iPar+1, row=iBodypart+1
-#                     )
-#             fig2.add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
+        # session_parameters = \
+        # f"{session_date[iPar]}_{rat_name[iPar]}_speed{treadmill_speed[iPar]}_incline{treadmill_incline[iPar]}"
         
-#     # Edit the layout
-#     fig1.update_layout(
-#         title=f'<b>Behavioral State Space Across {bodyparts_list[0]} and {bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]}, Trial Averages</b>',
-#         xaxis_title='<b>'+bodyparts_list[0]+' mean</b>',
-#         yaxis_title=f'<b>{bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]} mean</b>'
-#         )
-#     fig1.update_yaxes(scaleanchor = "x",scaleratio = 1)
-    
-#     fig2.update_layout(title=f'<b>{align_to}-Aligned Kinematics for {i_rat_name} on {i_session_date}, Trial Bounds: {trial_reject_bounds_mm}</b>')
-#     for xx in range(len(treadmill_incline)):
-#         fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = xx+1)
-#     for yy, yTitle in enumerate(bodyparts_list):
-#         fig2.update_yaxes(title_text="<b>"+str(yTitle)+" (mm)</b>", row = yy+1, col = 1)
-#     # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
-#     # fig2.update_yaxes(matches='y')
-    
-#     iplot(fig1)
-#     iplot(fig2)
-#     return
+        # raster_figs = raster(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        # filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+        # bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
+        # origin_offsets, bodyparts_list, session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
+        # camera_fps, align_to, vid_length, time_frame,
+        # do_plot, plot_template, MU_colors, CH_colors)
+        
+        number_of_steps = len(keep_trial_set)
+        number_of_rows = 2*(len(plot_units)*number_of_steps)+1
+        row_spec_list = number_of_rows*[[None]]
+        row_spec_list[0] = [{'rowspan': len(plot_units)*number_of_steps, 'b': 0.15}]
+        row_spec_list[len(plot_units)*number_of_steps+1] = [{'rowspan': len(plot_units)*number_of_steps}]
+        
+        big_fig.append(make_subplots(
+            rows=number_of_rows, cols=1,
+            specs=row_spec_list,
+            shared_xaxes=False,
+            subplot_titles=(
+            f"tmp",
+            f"<b>Binned Neural Activity for Steps:</b> {keep_trial_set}"
+            )))
+        big_fig[iPar].layout.annotations[0].update(text=figs[0].layout.title.text.split('<br>')[1])
+        
+        for iTrace in range(len(figs[0].data)):
+            big_fig[iPar].add_trace(figs[0].data[iTrace], row=1, col=1)
+        
+        CH_colors.reverse()
+        for iStep in range(binned_spike_array.shape[0]):
+            big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
+            big_fig[iPar].data[iStep]['opacity'] = 0.5
+            big_fig[iPar].data[iStep]['line']['width'] = 5
+            for ii, iUnit in enumerate(plot_units):                
+                if ii==0:
+                    color = MU_colors[iStep % len(MU_colors)]
+                elif ii==1:
+                    color = CH_colors[iStep % len(MU_colors)]
+                else:
+                    color = 'black'
+                big_fig[iPar].add_scatter(
+                    x=np.arange(len(binned_spike_array[iStep,:,iUnit])),
+                    y=binned_spike_array[iStep,:,iUnit]-5*iStep,
+                    row=len(plot_units)*number_of_steps+2, col=1,
+                    name=f"step{steps_to_keep_arr[iStep]}, unit{iUnit}",
+                    line_color=color, # color large units darker
+                    line_width=3, opacity=0.6)
+        if phase_align:
+            bin_width = np.round(bin_width_radian,decimals=3)
+            bin_units = "radians"
+        else:
+            bin_width = bin_width_ms
+            bin_units = "ms"
+            
+        big_fig[iPar].update_xaxes(title_text=f"<b>Bins ({bin_width} {bin_units})</b>",row=len(plot_units)*number_of_steps+2, col=1)
+        big_fig[iPar].update_yaxes(title_text=f"<b>Binned Spike Counts</b>",row=len(plot_units)*number_of_steps+2, col=1)
+        
+        big_fig[iPar].add_scatter(x=[18,18], y=[-1,-6], mode='lines', line_width=5,
+                                  line_color="black", name="scalebar",
+                                  row=len(plot_units)*number_of_steps+2, col=1)
+        big_fig[iPar].add_scatter(x=[17], y=[-3], text='<b>5 spikes<br>per bin</b>',
+                                  textposition="middle left", mode='text', line_width=5,
+                                  line_color="black", name="label",
+                                  row=len(plot_units)*number_of_steps+2, col=1)
+        # tried barplot, didn't work
+        # for iStep in range(binned_spike_array.shape[0]):
+        #     big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
+        #     big_fig[iPar].data[iStep]['opacity'] = 0.5
+        #     big_fig[iPar].data[iStep]['line']['width'] = 5
+        #     for iUnit in plot_units:                
+        #         big_fig[iPar].add_bar(
+        #             x=np.arange(len(binned_spike_array[iStep,:,iUnit])),
+        #             y=binned_spike_array[iStep,:,iUnit],
+        #             row=len(plot_units)*number_of_steps+iStep, col=1,
+        #             name=f"step{steps_to_keep_arr[iStep]}, unit{iUnit}",
+        #             marker_color=MU_colors[iStep % len(MU_colors)],
+        #             opacity=0.5)
+                    
+        # i_session_date = session_date[iPar]
+        # i_rat_name = str(rat_name[iPar]).lower()
+        # i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
+        # i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
+        # session_parameters_lst.append(
+        #     f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}")
+        # trialized_anipose_dfs_lst.append(trialized_anipose_df)
+        # trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
+        #                         np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
+        
+        # big_fig[iPar].add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
+        
+        # Edit the layout
+        big_fig[iPar].update_layout(
+            title=f'<b>Comparison Across Motor Unit State-Space Representation and Spike Binning</b>',
+            xaxis_title=f'<b>Unit 0 Smoothed Activity</b>',
+            yaxis_title='<b>Unit 1 Smoothed Activity</b>'
+            )
+        big_fig[iPar].update_xaxes(scaleanchor = "y", scaleratio = 1, row=1, col=1)
+        # big_fig[iPar].update_yaxes(scaleanchor = "x", scaleratio = 1, row=1, col=1)
+        # big_fig[iPar].update_yaxes(matches='x', row=1, col=1)
+        
+        # fig2.update_layout(title=f'<b>{align_to}-Aligned Kinematics for {i_rat_name} on {i_session_date}, Trial Bounds: {trial_reject_bounds_mm}</b>')
+        # for xx in range(len(treadmill_incline)):
+        #     fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = xx+1)
+        # for yy, yTitle in enumerate(bodyparts_list):
+        #     fig2.update_yaxes(title_text="<b>"+str(yTitle)+" (mm)</b>", row = yy+1, col = 1)
+        # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
+        # fig2.update_yaxes(matches='y')
+        
+        iplot(big_fig[iPar])
+        return

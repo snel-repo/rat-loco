@@ -192,7 +192,7 @@ def peak_align_and_filt(
     return processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list
 
 def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
-                   bodypart_ref_filter, trial_reject_bounds_mm, origin_offsets, bodyparts_list,
+                   bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
                    filter_all_anipose, session_date, rat_name, treadmill_speed, treadmill_incline,
                    camera_fps, align_to, time_frame):
     
@@ -303,10 +303,10 @@ def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_refer
 
     return (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs,
             sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list,
-            pre_align_offset, post_align_offset, trial_reject_bounds_mm)
+            pre_align_offset, post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec,)
 
 def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
-                     bodypart_ref_filter, trial_reject_bounds_mm, origin_offsets, bodyparts_list,
+                     bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
                      filter_all_anipose, session_date, rat_name, treadmill_speed,
                      treadmill_incline, camera_fps, align_to, time_frame, MU_colors, CH_colors):
     
@@ -328,9 +328,9 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
     for iPar in range(len(treadmill_incline)):
         (trialized_anipose_df,keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice,
         step_time_slice, ref_bodypart_trace_list, pre_align_offset, post_align_offset,
-        trial_reject_bounds_mm) = trialize_steps(
+        trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
             anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-            trial_reject_bounds_mm, origin_offsets, bodyparts_list,
+            trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
             filter_all_anipose, session_date[iPar], rat_name[iPar], treadmill_speed[iPar],
             treadmill_incline[iPar], camera_fps, align_to, time_frame)
         
@@ -385,9 +385,9 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         xaxis_title='<b>'+bodyparts_list[0]+' mean</b>',
         yaxis_title=f'<b>{bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]} mean</b>'
         )
-    fig1.update_yaxes(scaleanchor = "x",scaleratio = 1)
+    fig1.update_yaxes(scaleanchor = "x", scaleratio = 1)
     
-    fig2.update_layout(title=f'<b>{align_to}-Aligned Kinematics for {i_rat_name} on {i_session_date}, Trial Bounds: {trial_reject_bounds_mm}</b>')
+    fig2.update_layout(title=f'<b>{align_to}-Aligned Kinematics for {i_rat_name} on {i_session_date}, Trial Rejection Bounds: {trial_reject_bounds_mm}</b>')
     for xx in range(len(treadmill_incline)):
         fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = xx+1)
     for yy, yTitle in enumerate(bodyparts_list):

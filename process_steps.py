@@ -118,22 +118,20 @@ def peak_align_and_filt(
         processed_anipose_df[bodypart_for_alignment[0]],
         height=[None,None],
         threshold=None,
-        distance=20,
+        distance=30,
         prominence=None,
         width=None,
-        wlen=None,
-        rel_height=None
+        wlen=None
         )
 
     foot_off_idxs, _ = find_peaks(
         -processed_anipose_df[bodypart_for_alignment[0]], # invert signal to find the troughs
         height=[None,None],
         threshold=None,
-        distance=20,
+        distance=30,
         prominence=None,
         width=None,
-        wlen=None,
-        rel_height=None
+        wlen=None
         )
 
     # index off outermost steps, to skip noisy initial tracking
@@ -172,7 +170,7 @@ def peak_align_and_filt(
             step_time_slice = slice(foot_off_idxs[start_step],foot_off_idxs[stop_step-1])
     
     # step_time_slice = slice(all_step_idx[0],all_step_idx[1])
-    sliced_steps_diff = pd.DataFrame(np.diff(step_idxs[start_step:stop_step]))#step_idxs[1:] - step_idxs[:-1])
+    sliced_steps_diff = pd.DataFrame(np.diff(step_idxs[step_slice]))#step_idxs[1:] - step_idxs[:-1])
     
     print(
         f"Inter-step timing stats for {align_to}, from step {start_step} to {stop_step-1}:\
@@ -294,15 +292,26 @@ def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_refer
             raise TypeError("Wrong type specified for `trial_reject_bounds_mm` parameter in `rat_loco_analysis.py`")
         
         for iTrial in drop_trial_set:
-            # drop out of bounds trials from DataFrame in place
+            # drop out of bounds trials from DataFrame in place, use log10 to get number of decimals for zfilling
             trialized_anipose_df.drop( 
                 list(trialized_anipose_df.filter(like = \
                     f"_{str(iTrial).zfill(int(1+np.log10(true_step_idx.max())))}")), axis=1, inplace=True)
+    
+        sliced_steps_diff = np.diff(step_idxs)
+        kept_steps_diff = pd.DataFrame(np.array([sliced_steps_diff[iTrial-step_slice.start] for iTrial in (keep_trial_set)]))
+        print(
+            f"Inter-step timing stats for {align_to}, for steps: {keep_trial_set}:\
+                \nFile: {session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}")
+        
+        kept_step_stats = kept_steps_diff.describe()[0]
+        
+        display(kept_step_stats)
     else:
         print("No trials rejected, because `trial_reject_bounds_mm` set to False in `rat_loco_analysis.py`")
-
-    return (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs,
-            sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list,
+        kept_step_stats = sliced_step_stats
+        
+    return (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
+            kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list,
             pre_align_offset, post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec,)
 
 def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
@@ -326,7 +335,7 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         # f"<b>Locomotion Kinematics: {list(chosen_anipose_data_dict.keys())[0]}</b>",
         # f"<b>Neural Activity: {list(chosen_ephys_data_dict.keys())[0]}</b>"
     for iPar in range(len(treadmill_incline)):
-        (trialized_anipose_df,keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice,
+        (trialized_anipose_df,keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats, kept_step_stats, step_slice,
         step_time_slice, ref_bodypart_trace_list, pre_align_offset, post_align_offset,
         trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
             anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,

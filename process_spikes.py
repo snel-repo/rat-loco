@@ -430,7 +430,7 @@ def bin_and_count(
     #     camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
 
     (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
-     step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
+     kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
      post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
         anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
         trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
@@ -442,10 +442,10 @@ def bin_and_count(
     step_to_ephys_conversion_ratio = ephys_sample_rate/camera_fps
     # initialize zero array to carry step-aligned spike activity,
     # with shape: Steps x Time (in ephys sample rate) x Units
-    number_of_steps = int(sliced_step_stats['count'])
+    number_of_steps = int(kept_step_stats['count'])
     MU_spikes_3d_array_ephys_time = np.zeros(
         (number_of_steps, 
-        int(sliced_step_stats['max']*step_to_ephys_conversion_ratio),
+        int(kept_step_stats['max']*step_to_ephys_conversion_ratio),
         len(MU_spikes_dict),
         ))
     MU_spikes_3d_array_ephys_2π = MU_spikes_3d_array_ephys_time.copy()
@@ -470,68 +470,75 @@ def bin_and_count(
     # fill 3d numpy array with Steps x Time x Units data, and a list of aligned idxs
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()): # for each unit
         MU_spikes_idx_arr = np.array(MU_spikes_dict[iUnitKey]+step_idxs_in_ephys_time[0])
-        for iStep in range(number_of_steps): # for each step
+        for ii, iStep in enumerate(keep_trial_set):#range(number_of_steps): # for each step
+            iStep -= step_slice.start
             # skip all spike counting and list appending if not in `keep_trial_set`
-            if iStep+step_slice.start in keep_trial_set:
-                # keep track of index boundaries for each step
-                this_step_idx = step_idxs_in_ephys_time[iStep].astype(int)
-                next_step_idx = step_idxs_in_ephys_time[iStep+1].astype(int)
-                # filter out indexes which are outside the slice or this step's boundaries
-                spike_idxs_in_step_and_slice_bounded = MU_spikes_idx_arr[np.where(
-                    (MU_spikes_idx_arr < next_step_idx) &
-                    (MU_spikes_idx_arr >= this_step_idx) &
-                    (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
-                    (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
-                    )]
-                # subtract current step index to align to each step, and convert to integer index
-                MU_spikes_idxs_for_step = (
-                    spike_idxs_in_step_and_slice_bounded - this_step_idx).astype(int)
-                # store aligned indexes for each step
-                MU_step_aligned_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step)
-                # if any spikes are present, set them to 1 for this unit during this step
-                if len(MU_spikes_idxs_for_step)!=0:
-                    MU_spikes_3d_array_ephys_time[iStep, MU_spikes_idxs_for_step, iUnit] = 1
-            else: # mark slices with NaN's for later removal if not inside the keep_trial_set
-                MU_spikes_3d_array_ephys_time[iStep, :, iUnit] = np.nan
+            # if iStep+step_slice.start in keep_trial_set:
+            # keep track of index boundaries for each step
+            this_step_idx = step_idxs_in_ephys_time[iStep].astype(int)
+            next_step_idx = step_idxs_in_ephys_time[iStep+1].astype(int)
+            # filter out indexes which are outside the slice or this step's boundaries
+            spike_idxs_in_step_and_slice_bounded = MU_spikes_idx_arr[np.where(
+                (MU_spikes_idx_arr < next_step_idx) &
+                (MU_spikes_idx_arr >= this_step_idx) &
+                (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
+                )]
+            # subtract current step index to align to each step, and convert to integer index
+            MU_spikes_idxs_for_step = (
+                spike_idxs_in_step_and_slice_bounded - this_step_idx).astype(int)
+            # store aligned indexes for each step
+            MU_step_aligned_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step)
+            # if any spikes are present, set them to 1 for this unit during this step
+            if len(MU_spikes_idxs_for_step)!=0:
+                MU_spikes_3d_array_ephys_time[ii, MU_spikes_idxs_for_step, iUnit] = 1
+            # else: # mark slices with NaN's for later removal if not inside the keep_trial_set
+            #     MU_spikes_3d_array_ephys_time[ii, :, iUnit] = np.nan
         # create phase aligned step indexes, with max index for each step set to 2π    
         bin_width_eph_2π = []
-        for πStep in range(number_of_steps): # for each step
-            if πStep+step_slice.start in keep_trial_set:
-                # keep track of index boundaries for each step
-                this_step_2π_idx = step_idxs_in_ephys_time[πStep].astype(int)
-                next_step_2π_idx = step_idxs_in_ephys_time[πStep+1].astype(int)
-                # filter out indexes which are outside the slice or this step_2π's boundaries
-                spike_idxs_in_step_2π_and_slice_bounded = MU_spikes_idx_arr[np.where(
-                    (MU_spikes_idx_arr < next_step_2π_idx) &
-                    (MU_spikes_idx_arr >= this_step_2π_idx) &
-                    (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
-                    (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
-                    )]
-                # coefficient to make step out of 2π radians, step made to be 2π after multiplication
-                phase_warp_2π_coeff = 2*np.pi/(
-                    step_idxs_in_ephys_time[πStep+1]-step_idxs_in_ephys_time[πStep])
-                phase_warp_2π_coeff_list.append(phase_warp_2π_coeff)
-                # subtract this step start idx, and convert to an integer index
-                MU_spikes_idxs_for_step_aligned = (
-                    spike_idxs_in_step_2π_and_slice_bounded - this_step_2π_idx).astype(int)
-                MU_spikes_idxs_for_step_2π = MU_spikes_idxs_for_step_aligned * phase_warp_2π_coeff
-                # store aligned indexes for each step_2π
-                MU_step_2π_warped_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step_2π)
-                # if spikes are present, set them to 1 for this unit during this step
-                if len(MU_spikes_idxs_for_step_2π)!=0:
-                    MU_spikes_3d_array_ephys_2π[πStep,
-                        # convert MU_spikes_idxs_for_step_2π back to ephys sample rate-sized indexes
-                        np.round(MU_spikes_idxs_for_step_2π/(
-                            2*np.pi)*MU_spikes_3d_array_ephys_2π.shape[1]).astype(int),iUnit] = 1
-            else: # mark slices with NaN's for later removal if not inside the keep_trial_set
-                MU_spikes_3d_array_ephys_2π[πStep, :, iUnit] = np.nan
+        for ii, πStep in enumerate(keep_trial_set): #range(number_of_steps): # for each step
+            πStep -= step_slice.start
+            # if πStep+step_slice.start in keep_trial_set:
+            # keep track of index boundaries for each step
+            this_step_2π_idx = step_idxs_in_ephys_time[πStep].astype(int)
+            next_step_2π_idx = step_idxs_in_ephys_time[πStep+1].astype(int)
+            # filter out indexes which are outside the slice or this step_2π's boundaries
+            spike_idxs_in_step_2π_and_slice_bounded = MU_spikes_idx_arr[np.where(
+                (MU_spikes_idx_arr < next_step_2π_idx) &
+                (MU_spikes_idx_arr >= this_step_2π_idx) &
+                (MU_spikes_idx_arr >= (step_time_slice.start*step_to_ephys_conversion_ratio).astype(int)) &
+                (MU_spikes_idx_arr <= (step_time_slice.stop*step_to_ephys_conversion_ratio).astype(int))
+                )]
+            # coefficient to make step out of 2π radians, step made to be 2π after multiplication
+            phase_warp_2π_coeff = 2*np.pi/(
+                step_idxs_in_ephys_time[πStep+1]-step_idxs_in_ephys_time[πStep])
+            phase_warp_2π_coeff_list.append(phase_warp_2π_coeff)
+            # subtract this step start idx, and convert to an integer index
+            MU_spikes_idxs_for_step_aligned = (
+                spike_idxs_in_step_2π_and_slice_bounded - this_step_2π_idx).astype(int)
+            MU_spikes_idxs_for_step_2π = MU_spikes_idxs_for_step_aligned * phase_warp_2π_coeff
+            # store aligned indexes for each step_2π
+            MU_step_2π_warped_spike_idxs_dict[iUnitKey].append(MU_spikes_idxs_for_step_2π)
+            # if spikes are present, set them to 1 for this unit during this step
+            if len(MU_spikes_idxs_for_step_2π)!=0:
+                MU_spikes_3d_array_ephys_2π[ii,
+                    # convert MU_spikes_idxs_for_step_2π back to ephys sample rate-sized indexes
+                    np.round(MU_spikes_idxs_for_step_2π/(
+                        2*np.pi)*MU_spikes_3d_array_ephys_2π.shape[1]).astype(int),iUnit] = 1
+            # else: # mark slices with NaN's for later removal if not inside the keep_trial_set
+            #     MU_spikes_3d_array_ephys_2π[ii, :, iUnit] = np.nan
     # drop all steps rejected by `process_steps.trialize_steps()`
     steps_to_keep_arr = np.sort(np.fromiter(keep_trial_set,int))
     # (~np.isnan(MU_spikes_3d_array_ephys_time[iStep+step_slice.start,:,:])).any()
-    MU_spikes_3d_array_ephys_time = MU_spikes_3d_array_ephys_time[
-                                        steps_to_keep_arr-step_slice.start,:,:]
-    MU_spikes_3d_array_ephys_2π = MU_spikes_3d_array_ephys_2π[
-                                        steps_to_keep_arr-step_slice.start,:,:]
+
+    # MU_spikes_3d_array_ephys_time = MU_spikes_3d_array_ephys_time[
+    #                                 steps_to_keep_arr-step_slice.start,
+    #                                 :,#int(step_to_ephys_conversion_ratio*kept_step_stats.max()),
+    #                                 :]
+    # MU_spikes_3d_array_ephys_2π = MU_spikes_3d_array_ephys_2π[
+    #                                 steps_to_keep_arr-step_slice.start,
+    #                                 :,#int(step_to_ephys_conversion_ratio*kept_step_stats.max()),
+    #                                 :]
     
     # bin 3d array to time bins with width: bin_width_ms
     ms_duration = MU_spikes_3d_array_ephys_time.shape[1]/ephys_sample_rate*1000
@@ -876,18 +883,17 @@ def state_space(
         do_plot=False, phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
         CH_colors=CH_colors)
     
-    # session_parameters = \
-    #     f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    session_parameters = \
+        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # select units for plotting
     sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
     
     # set numbers of things from input matrix dimensionality
-    number_of_steps = sliced_MU_smoothed_3d_array.shape[0]
-    number_of_bins = sliced_MU_smoothed_3d_array.shape[1]
+    # number_of_steps = sliced_MU_smoothed_3d_array.shape[0]
+    # number_of_bins = sliced_MU_smoothed_3d_array.shape[1]
     # detect number of identified units
     number_of_units = sliced_MU_smoothed_3d_array.any(1).any(0).sum()
-    
     if phase_align is True:
         bin_width = bin_width_radian
         bin_unit = ' radians'
@@ -950,16 +956,16 @@ def state_space(
     if number_of_units<=2:
         fig.update_layout(
             title_text=
-            f'<b>{title_prefix}MU State Space Activity for Channel {ephys_channel_idxs_list[0]} Across Inclines</b>\
-            <br><sup><b>Incline: {treadmill_incline}</b>, Bin Width: {np.round(bin_width,4)}{bin_unit}, Smoothed by {smoothing_window} bin window</sup>',
+            f'<b>{title_prefix}MU State Space Activity for Channel {ephys_channel_idxs_list[0]}</b>\
+            <br><sup>{session_parameters}, Bin Width: {np.round(bin_width,3)}{bin_unit}, Smoothed by {smoothing_window} bin window</sup>',
             xaxis_title_text=f'<b>Unit {plot_units[0]}</b>',
             yaxis_title_text=f'<b>Unit {plot_units[1]}</b>'
             )
     elif number_of_units==3:
         fig.update_layout(
             title_text=
-            f'<b>{title_prefix}MU State Space Activity for Channel {ephys_channel_idxs_list[0]} Across Inclines</b>\
-            <br><sup><b>Incline: {treadmill_incline}</b>, Bin Width: {bin_width}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
+            f'<b>{title_prefix}MU State Space Activity for Channel {ephys_channel_idxs_list[0]}</b>\
+            <br><sup>{session_parameters}, Bin Width: {np.round(bin_width,3)}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
         fig.update_scenes(
             dict(camera=dict(eye=dict(x=-0.3, y=-2, z=0.2)), #the default values are 1.25, 1.25, 1.25
                 xaxis = dict(title_text=f'<b>Unit {plot_units[0]}</b>'),
@@ -995,8 +1001,8 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
     big_fig = []
     for iPar in range(len(treadmill_incline)):
         (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
-         step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset, post_align_offset,
-        trial_reject_bounds_mm, trial_reject_bounds_sec) = \
+         kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
+         post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = \
             trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
                            bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
                            origin_offsets, bodyparts_list, filter_all_anipose, session_date[iPar],
@@ -1033,12 +1039,16 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
         # camera_fps, align_to, vid_length, time_frame,
         # do_plot, plot_template, MU_colors, CH_colors)
         
+        # set height ratios for each subplot using `specs` parameter of `make_subplots()`
         number_of_steps = len(keep_trial_set)
         number_of_rows = 2*(len(plot_units)*number_of_steps)+1
         row_spec_list = number_of_rows*[[None]]
-        row_spec_list[0] = [{'rowspan': len(plot_units)*number_of_steps, 'b': 0.15}]
-        row_spec_list[len(plot_units)*number_of_steps+1] = [{'rowspan': len(plot_units)*number_of_steps}]
-        
+        if len(plot_units)>=3 and MU_smoothed_spikes_3d_array.any(1).any(0).sum()>=3:
+            row_spec_list[0] = [{'type': 'scatter3d','rowspan': len(plot_units)*number_of_steps, 'b': 0.01}] # 15% padding between
+        elif len(plot_units)>=2 and MU_smoothed_spikes_3d_array.any(1).any(0).sum()>=2:
+            row_spec_list[0] = [{'type': 'scatter','rowspan': len(plot_units)*number_of_steps, 'b': 0.1}] # 15% padding between
+        row_spec_list[len(plot_units)*number_of_steps+1] = [{'type': 'scatter','rowspan': len(plot_units)*number_of_steps}]
+    
         big_fig.append(make_subplots(
             rows=number_of_rows, cols=1,
             specs=row_spec_list,
@@ -1047,30 +1057,51 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
             f"tmp",
             f"<b>Binned Neural Activity for Steps:</b> {keep_trial_set}"
             )))
-        big_fig[iPar].layout.annotations[0].update(text=figs[0].layout.title.text.split('<br>')[1])
-        
+        big_fig[iPar].layout.annotations[0].update(text=figs[0].layout.title.text)#.split('<br>')[1])
         for iTrace in range(len(figs[0].data)):
             big_fig[iPar].add_trace(figs[0].data[iTrace], row=1, col=1)
-        
+            
+        activity_matrix = binned_spike_array
+        row_offset = activity_matrix.max()
         CH_colors.reverse()
-        for iStep in range(binned_spike_array.shape[0]):
+        for iStep in range(activity_matrix.shape[0]):
             big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
             big_fig[iPar].data[iStep]['opacity'] = 0.5
             big_fig[iPar].data[iStep]['line']['width'] = 5
-            for ii, iUnit in enumerate(plot_units):                
-                if ii==0:
+            for iUnit in plot_units:                
+                if iUnit==0:
                     color = MU_colors[iStep % len(MU_colors)]
-                elif ii==1:
-                    color = CH_colors[iStep % len(MU_colors)]
+                elif iUnit==1: # color large units darker
+                    color = 'grey'#CH_colors[iStep % len(MU_colors)]
+                else:
+                    color = 'black'
+                big_fig[iPar].add_scatter(x=np.hstack((np.arange(MU_smoothed_spikes_3d_array.shape[1]),MU_smoothed_spikes_3d_array.shape[1]-1,0)),
+                                          y=np.hstack((MU_smoothed_spikes_3d_array[iStep,:,iUnit]*max(activity_matrix[iStep,:,iUnit])/max(MU_smoothed_spikes_3d_array[iStep,:,iUnit]),0,0))-row_offset*iStep,
+                                          row=len(plot_units)*number_of_steps+2, col=1,
+                                          name=f"smoothed step{steps_to_keep_arr[iStep]}, unit{iUnit}",
+                                          opacity=0.3, fill='toself', mode='lines', # override default markers+lines
+                                          line_color=color, fillcolor=color,
+                                          hoverinfo="skip", showlegend=False
+                                          )
+        for iStep in range(activity_matrix.shape[0]):
+            big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
+            big_fig[iPar].data[iStep]['opacity'] = 0.5
+            big_fig[iPar].data[iStep]['line']['width'] = 5
+            for iUnit in plot_units:                
+                if iUnit==0:
+                    color = MU_colors[iStep % len(MU_colors)]
+                elif iUnit==1: # color large units darker
+                    color = 'grey'#CH_colors[iStep % len(MU_colors)]
                 else:
                     color = 'black'
                 big_fig[iPar].add_scatter(
-                    x=np.arange(len(binned_spike_array[iStep,:,iUnit])),
-                    y=binned_spike_array[iStep,:,iUnit]-5*iStep,
+                    x=np.arange(len(activity_matrix[iStep,:,iUnit])),
+                    y=activity_matrix[iStep,:,iUnit]-row_offset*iStep,
                     row=len(plot_units)*number_of_steps+2, col=1,
                     name=f"step{steps_to_keep_arr[iStep]}, unit{iUnit}",
-                    line_color=color, # color large units darker
-                    line_width=3, opacity=0.6)
+                    mode='lines', line_color=color,
+                    line_width=3, opacity=0.7)
+
         if phase_align:
             bin_width = np.round(bin_width_radian,decimals=3)
             bin_units = "radians"
@@ -1079,15 +1110,16 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
             bin_units = "ms"
             
         big_fig[iPar].update_xaxes(title_text=f"<b>Bins ({bin_width} {bin_units})</b>",row=len(plot_units)*number_of_steps+2, col=1)
-        big_fig[iPar].update_yaxes(title_text=f"<b>Binned Spike Counts</b>",row=len(plot_units)*number_of_steps+2, col=1)
+        big_fig[iPar].update_yaxes(title_text=f"<b>Stepwise Binned Spike Counts</b>",row=len(plot_units)*number_of_steps+2, col=1)
         
-        big_fig[iPar].add_scatter(x=[18,18], y=[-1,-6], mode='lines', line_width=5,
-                                  line_color="black", name="scalebar",
-                                  row=len(plot_units)*number_of_steps+2, col=1)
-        big_fig[iPar].add_scatter(x=[17], y=[-3], text='<b>5 spikes<br>per bin</b>',
-                                  textposition="middle left", mode='text', line_width=5,
-                                  line_color="black", name="label",
-                                  row=len(plot_units)*number_of_steps+2, col=1)
+        # if activity_matrix is binned_spike_array:
+        #     big_fig[iPar].add_scatter(x=[int(0.20*activity_matrix.shape[1]),int(0.20*activity_matrix.shape[1])],
+        #                               y=[-1,-6], mode='lines', line_width=5,line_color="black", name="scalebar",
+        #                               row=len(plot_units)*number_of_steps+2, col=1)
+        #     big_fig[iPar].add_scatter(x=[int(0.19*activity_matrix.shape[1])], y=[-3],
+        #                               text="<b>5 spikes<br>per bin</b>", textposition="middle left",
+        #                               mode='text', line_width=5,line_color="black", name="label",
+        #                               row=len(plot_units)*number_of_steps+2, col=1)
         # tried barplot, didn't work
         # for iStep in range(binned_spike_array.shape[0]):
         #     big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
@@ -1115,12 +1147,27 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
         # big_fig[iPar].add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
         
         # Edit the layout
-        big_fig[iPar].update_layout(
-            title=f'<b>Comparison Across Motor Unit State-Space Representation and Spike Binning</b>',
-            xaxis_title=f'<b>Unit 0 Smoothed Activity</b>',
-            yaxis_title='<b>Unit 1 Smoothed Activity</b>'
-            )
-        big_fig[iPar].update_xaxes(scaleanchor = "y", scaleratio = 1, row=1, col=1)
+        if len(plot_units)>=3 and MU_smoothed_spikes_3d_array.any(1).any(0).sum()>=3:
+            big_fig[iPar].update_layout(
+                title=f"<b>Comparison Across Motor Unit State-Space Representation and Spike Binning</b>",
+                title_font_size=20)
+            big_fig[iPar].update_scenes(
+                dict(camera=dict(eye=dict(x=-0.3, y=-2, z=0.2)), #the default values are 1.25, 1.25, 1.25
+                xaxis = dict(title_text=f'<b>Unit {plot_units[0]}</b>'),
+                yaxis = dict(title_text=f'<b>Unit {plot_units[1]}</b>'),
+                zaxis = dict(title_text=f'<b>Unit {plot_units[2]}</b>'),
+                aspectmode='manual', #this string can be 'data', 'cube', 'auto', 'manual'
+                # custom aspectratio is defined as follows:
+                aspectratio=dict(x=1, y=1, z=1)),
+                row=1, col=1)
+        elif len(plot_units)>=2 and MU_smoothed_spikes_3d_array.any(1).any(0).sum()>=2:
+            big_fig[iPar].update_layout(
+                title=f"<b>Comparison Across Motor Unit State-Space Representation and Spike Binning</b>",
+                title_font_size=20,
+                xaxis_title=f"<b>Unit {plot_units[0]} Smoothed Activity</b>",
+                yaxis_title=f"<b>Unit {plot_units[1]} Smoothed Activity</b>"
+                )
+            big_fig[iPar].update_xaxes(scaleanchor = "y", scaleratio = 1, row=1, col=1)
         # big_fig[iPar].update_yaxes(scaleanchor = "x", scaleratio = 1, row=1, col=1)
         # big_fig[iPar].update_yaxes(matches='x', row=1, col=1)
         
@@ -1131,6 +1178,5 @@ def MU_space_stepwise(ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitu
         #     fig2.update_yaxes(title_text="<b>"+str(yTitle)+" (mm)</b>", row = yy+1, col = 1)
         # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
         # fig2.update_yaxes(matches='y')
-        
         iplot(big_fig[iPar])
         return

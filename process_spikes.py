@@ -402,7 +402,7 @@ def bin_and_count(
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, do_plot, plot_template, MU_colors, CH_colors
+    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data, do_plot, plot_template, MU_colors, CH_colors
     ):
     
     # check inputs for problems
@@ -668,7 +668,11 @@ def bin_and_count(
         iplot(fig1)
         iplot(fig2)
 
-    return (
+    if save_binned_MU_data is not False:
+        np.save(session_parameters+"_time.npy",MU_spikes_3d_array_binned, allow_pickle=False)
+        np.save(session_parameters+"_phase.npy",MU_spikes_3d_array_binned_2π, allow_pickle=False)
+        
+    return(
         MU_step_aligned_spike_idxs_dict,
         MU_step_aligned_spike_counts_dict,
         MU_step_2π_warped_spike_idxs_dict,
@@ -676,7 +680,7 @@ def bin_and_count(
         MU_spikes_3d_array_binned,
         MU_spikes_3d_array_binned_2π,
         MU_spikes_count_across_all_steps, steps_to_keep_arr,
-        step_idxs_in_ephys_time, ephys_sample_rate, figs
+        step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
     )
 
 def raster(
@@ -684,7 +688,7 @@ def raster(
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame,
+    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
     do_plot, plot_template, MU_colors, CH_colors
     ):
     
@@ -695,16 +699,14 @@ def raster(
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
     MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, figs
+    step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame,
+    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
-    
-    session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     number_of_steps = MU_spikes_3d_array_ephys_time.shape[0]
     samples_per_step = MU_spikes_3d_array_ephys_time.shape[1]
@@ -766,7 +768,7 @@ def smooth(
     filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
     anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
     trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
-    treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,
+    treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,save_binned_MU_data,
     do_plot, phase_align, plot_template, MU_colors, CH_colors):
     
     (MU_step_aligned_spike_idxs_dict,
@@ -776,16 +778,15 @@ def smooth(
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
     MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, figs
+    step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
     ) = bin_and_count(
     ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys,
     filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
     bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets,
     bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline, camera_fps,
-    align_to, vid_length, time_frame, do_plot=False, plot_template=plot_template,
+    align_to, vid_length, time_frame, save_binned_MU_data, do_plot=False, plot_template=plot_template,
     MU_colors=MU_colors, CH_colors=CH_colors)
     
-    session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     # initialize 3d numpy array with shape: Steps x Bins x Units
     if phase_align is True:
         binned_spike_array = MU_spikes_3d_array_binned_2π

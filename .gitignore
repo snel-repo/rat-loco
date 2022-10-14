@@ -157,3 +157,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# numpy files
+*.npy

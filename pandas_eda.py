@@ -16,12 +16,13 @@ from pdb import set_trace
 import colorlover as cl
 
 def pandas_eda(
-    ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, origin_offsets,
-    session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame,
-    do_plot, plot_template, MU_colors, CH_colors):
+        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+        bodypart_for_alignment, bodypart_for_reference,
+        bodypart_ref_filter, origin_offsets,
+        session_date, rat_name, treadmill_speed, treadmill_incline,
+        camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
+        do_plot, plot_template, MU_colors, CH_colors):
     
     iPar = 0
     step_time_slice_lst = []
@@ -29,7 +30,8 @@ def pandas_eda(
     chosen_anipose_dfs_lst = []
     align_idxs_lst = []
     for iPar in range(len(treadmill_incline)):
-        processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = \
+        # processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice = \
+        processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list = \
                 peak_align_and_filt(anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
                               bodypart_for_reference=bodypart_for_reference, bodypart_ref_filter=bodypart_ref_filter,
                               origin_offsets=origin_offsets,

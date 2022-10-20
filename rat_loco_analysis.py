@@ -41,18 +41,19 @@ filter_all_anipose = False # 'highpass', 'median', or False
 trial_reject_bounds_mm = dict(peak=[-30,30],trough=[-30,30]) #mm, False/Integer/Dict, rejects trials outside bounds of the trial average at each bodypart's alignment timepoint. Examples: False / 40 / dict(peak=[10,40],trough=[-10,25] )
 trial_reject_bounds_sec = [[0,0.500]] #seconds, time window of step duration outside of which trials get rejected. Examples: [[0, 0.550]] or [[0.550, 0.6]]
 origin_offsets = dict(x=-18,y=bodypart_for_reference,z=135) # Values recorded from origin to treadmill bounds, insert bodypart_for_reference variable, or use zeroes for no offset if bodypart_for_reference is set for one coordinate, it overrides etting and will subtract for that coordinate. Examples: dict((x=-18,y=211,z=135))/dict(x=-87,y=211,z=135)/dict(x=52,y=-310,z=0)/dict(x=bodypart_for_reference,y=211,z=135), can be disbaled with disabled with False
-save_binned_MU_data = True
+save_binned_MU_data = False
+
 ## cleopatra ##
-session_date=4*[220715] #3*[220603]/4*[220715]/4*[220914]
+session_date=4*[220914] #3*[220603]/4*[220715]/4*[220914]
 rat_name=4*['cleopatra'] #3*['dogerat']/4*['cleopatra']
 treadmill_speed=4*[20] #3*[20]/4*[20]
-treadmill_incline=[15] #[0,5,10]/[0,5,10,15]
+treadmill_incline=[0,5,10,15] #[0,5,10]/[0,5,10,15]
 camera_fps=125 #100/125
 vid_length=10 #10/20
 time_frame=[0.05,0.95] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=1
 bin_width_radian=(2*pi)/500 # leave 2*pi numerator and denominator is your chosen number of bins
-smoothing_window = 4*[50] # bins
+smoothing_window = 4*[10] # bins
 phase_align=True # True/False, pertains to process_spikes.smooth() and process_spikes.state_space()
 align_to='foot off' # "foot strike"/"foot off"
 
@@ -71,9 +72,9 @@ align_to='foot off' # "foot strike"/"foot off"
 # align_to='foot off' # "foot strike"/"foot off"
 
 ### Plotting Parameters
-plot_type = "bin_and_count" # MU_space_stepwise # behavioral_space # sort # bin_and_count
+plot_type = "pandas_eda" # MU_space_stepwise # behavioral_space # sort # bin_and_count
 plot_units = [0,1,2]
-do_plot = False # set True/False, whether to actually generate plots
+do_plot = True # set True/False, whether to actually generate plots
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
 qual_dict_keys = ['Paired', 'Pastel1', 'Set1', 'Set3']

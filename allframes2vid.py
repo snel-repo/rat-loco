@@ -10,7 +10,7 @@ def allframes2vid(num_frames, downsampling_factor=1, destination='.', framerate=
           unique_base_filenames_list = unique_base_filenames.read().splitlines()
           for iFilename in unique_base_filenames_list:
                frames2vid.frames2vid(iFilename, num_frames, downsampling_factor, destination, framerate, num_cams)
-     
+     os.system("rm unique_base_filenames.txt")
 
 if __name__ == '__main__':
      if len(list(sys.argv)) == 2:
@@ -24,4 +24,4 @@ if __name__ == '__main__':
      elif len(list(sys.argv)) == 6:
           allframes2vid(num_frames=sys.argv[1], downsampling_factor=sys.argv[2], destination=sys.argv[3], framerate=sys.argv[4], num_cams=sys.argv[5])
      else:
-          raise Exception("enter at least 1 arguments and no more than 5! :) \nInputs: num_frames, destination, num_cams, and framerate")
+          raise Exception("enter at least 1 arguments and no more than 5! :) \nInputs: num_frames, downsampling_factor, destination, framerate, and num_cams")

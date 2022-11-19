@@ -32,4 +32,4 @@ if __name__ == '__main__':
      elif len(list(sys.argv)) == 7:
           frames2vid(base_filename=sys.argv[1], num_frames=sys.argv[2], downsampling_factor=sys.argv[3], destination=sys.argv[4], framerate=sys.argv[5], num_cams=sys.argv[6])
      else:
-          raise Exception("enter at least 2 arguments and no more than 6! :) \nInputs: base_filename, num_frames, destination, num_cams, and framerate")
+          raise Exception("enter at least 2 arguments and no more than 6! :) \nInputs: base_filename, num_frames, destination, framerate, and num_cams")

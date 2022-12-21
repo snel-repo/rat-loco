@@ -154,8 +154,8 @@ function allframes2vid(){
 	python ~/git/rat-loco/allframes2vid.py "$@"
 }
 
-function loopallframes2vid(){
-	python ~/git/rat-loco/loopallframes2vid.py "$@"
+function allsessionframes2vid(){
+	python ~/git/rat-loco/allsessionframes2vid.py "$@"
 }
 
 function stackvids(){

@@ -22,7 +22,7 @@
 ***GET CONVERTING FRAMES TO VIDEO***
 1. Close the Poisson terminal
 2. Execute `getframes` on Axon to get all images from Poisson for all sessions from today or `getframes <yyyymmdd>` for all sessions from another date.
-3. Go to `~/git/FLIR_Multi_Cam_HWTrig/`, then use `loopallframes2vid <number of frames>` to , or `loopallframes2vid <number of frames> <yyyymmdd>` for a different session date.
+3. Go to `~/git/FLIR_Multi_Cam_HWTrig/`, then use `allsessionframes2vid <number of frames>` to loop through all session folders from today and convert all frames to videos. For all sessions from a different date, run `allsessionframes2vid <number of frames> <yyyymmdd>`.
 4. (Optional) To combine and visualize all videos, navigate to one of the `images<yyyymmdd-X>` folders, and use `stackallvids`. Add argument: `xstack`, `hstack`, or `vstack` to stack them horizontally, vertically, or in a square (e.g. default is `stackallvids hstack`)
 
 ***ANIPOSE***

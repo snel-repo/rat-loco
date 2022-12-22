@@ -2,7 +2,7 @@ import errno
 import os
 import numpy as np
 from open_ephys.analysis import Session
-from datetime import datetime
+# from datetime import datetime
 # import matplotlib.pyplot as plt
 # import pandas as pd
 from pdb import set_trace
@@ -30,7 +30,7 @@ def import_OE_data(directory_list):
     # initialize lists and counter variable(s)
     number_of_recordings_per_session_list = []  # stores number of recordings found in each directory
     continuous_ephys_data_list = []             # stores continuous data
-    date_list = []                              # stores recording dates
+    # date_list = []                              # stores recording dates
     recording_path_list = []                    # stores recording paths
     iRecording = int(-1)                        # counts the number of recordings per directory
 
@@ -39,10 +39,13 @@ def import_OE_data(directory_list):
         number_of_recordings_per_session_list.append((len(session.recordnodes[0].recordings))) # store number of recordings to allow next looping operation
 
         for iExperiment in range(number_of_recordings_per_session_list[-1]):
+            # skip recording99
+            if 'recording99' in session.recordnodes[0].recordings[iExperiment].directory:
+                continue
             iRecording += 1 # increment to track the recording index out of all provided recording session paths
             continuous_ephys_data_list.append(session.recordnodes[0].recordings[iExperiment].continuous)
             # create list of session dates for the ones that were extracted
-            date_list.append(session.recordnodes[0].directory.split('/')[-2]) # grab the date out of the path
+            # date_list.append(session.recordnodes[0].directory.split('/')[-2]) # grab the date out of the path
             recording_path_list.append(session.recordnodes[0].recordings[iExperiment].directory)
             # set_trace()
             continuous_ephys_data_list[iRecording][0].samples = np.array(continuous_ephys_data_list[iRecording][0].samples,dtype='float32')
@@ -88,9 +91,9 @@ def import_OE_data(directory_list):
     else:
         # remove unnecessary extra list dimension and convert to numpy.ndarray
         continuous_ephys_data_list = np.squeeze(continuous_ephys_data_list).tolist() 
-    ephys_data_dict = dict(zip(list_of_session_IDs,continuous_ephys_data_list))
+    OE_data_dict = dict(zip(list_of_session_IDs,continuous_ephys_data_list))
     #set_trace()
-    return ephys_data_dict
+    return OE_data_dict
 
 ## section for testing a specific directory without other 
 # if __name__ == "__main__":

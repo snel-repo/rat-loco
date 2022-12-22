@@ -315,9 +315,9 @@ def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_refer
             pre_align_offset, post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec,)
 
 def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
-                     bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
-                     filter_all_anipose, session_date, rat_name, treadmill_speed,
-                     treadmill_incline, camera_fps, align_to, time_frame, MU_colors, CH_colors):
+        bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
+        filter_all_anipose, session_date, rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to,
+        time_frame, save_binned_MU_data, MU_colors, CH_colors):
     
     iPar = 0
     session_parameters_lst = []
@@ -396,7 +396,7 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         )
     fig1.update_yaxes(scaleanchor = "x", scaleratio = 1)
     
-    fig2.update_layout(title=f'<b>{align_to}-Aligned Kinematics for {i_rat_name} on {i_session_date}, Trial Rejection Bounds: {trial_reject_bounds_mm}</b>')
+    fig2.update_layout(title=f'<b>Locomotion Kinematics, Aligned to {align_to.title()}: {i_session_date}_{i_rat_name}_speed{i_treadmill_speed}</b>') # Trial Rejection Bounds: {trial_reject_bounds_mm}</b>')
     for xx in range(len(treadmill_incline)):
         fig2.update_xaxes(title_text='<b>Time (sec)</b>', row = len(bodyparts_list), col = xx+1)
     for yy, yTitle in enumerate(bodyparts_list):

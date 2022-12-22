@@ -93,6 +93,7 @@ tblib
 tenacity
 threadpoolctl
 tifffile
+tomli
 toolz
 tornado
 tqdm

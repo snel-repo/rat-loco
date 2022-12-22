@@ -1,0 +1,66 @@
+# TOML configuration document
+title = "Folder and Rat Configurations"
+
+# OpenEphys folders below (list of strings)
+# should have the "Record Node ###" folder inside it
+[data_dirs]
+OE = [
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-03_19-41-47',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-21-22',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-45-13',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
+    ]
+# KiloSort folders below (list of strings)
+# should have the "Record Node ###" folder inside it, and
+# "KilosortResults" in the "recording99" folder
+KS = [
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/2022-11-16_16-19-28_myo'
+    ]
+# Anipose folders below (list of strings)
+# should have the pose-3d folder inside it
+Anipose = [
+    # '/snel/share/data/anipose/session20220603',
+    # '/snel/share/data/anipose/session20220606',
+    # '/snel/share/data/anipose/session20220608',
+    # '/snel/share/data/anipose/session20220715',
+    # '/snel/share/data/anipose/session20220914',
+    # '/snel/share/data/anipose/session20221116',
+    # '/snel/share/data/anipose/session20221117',
+    '/snel/share/data/anipose/session20221220_128test/'
+]
+
+# rat-specific configurations
+[rat]
+[rat.cleopatra]
+bodyparts_list = ['palm_L_y','palm_L_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodypart_for_alignment = ['palm_L_y']
+session_date=[220715,220715,220715,220715]
+rat_name=['cleopatra','cleopatra','cleopatra','cleopatra'] 
+treadmill_speed=[20,20,20,20]
+treadmill_incline=[15,15,15,15]
+camera_fps=125 #125 FPS
+vid_length=10 #10/20 seconds
+
+[rat.dogerat]
+bodyparts_list = ['palm_R_y','palm_R_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodypart_for_alignment = ['palm_R_y']
+session_date=[220603,220603,220603] #3*[220603]/4*[220715]/4*[220914]
+rat_name=['dogerat','dogerat','dogerat'] #3*['dogerat']/4*['cleopatra']
+treadmill_speed=[20,20,20]
+treadmill_incline=[0,5,10]
+camera_fps=100 #100 FPS
+vid_length=20 #10/20/30 seconds
+
+[rat.godzilla]
+bodyparts_list = ['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodypart_for_alignment = ['palm_L_y']
+session_date = ['20221116-5']
+rat_name = ['godzilla','godzilla','godzilla','godzilla']
+treadmill_speed = [10,10,10,10]
+treadmill_incline = [0,0,0,0]
+camera_fps = 125 #125 FPS
+vid_length= 60 #30/60 seconds

@@ -1,54 +1,13 @@
-import import_OE_data, import_anipose_data, process_spikes, process_steps
-import import_KS_data
-import cluster_steps, pandas_eda, spike_motion_plot
+from import_OE_data import import_OE_data
+from import_anipose_data import import_anipose_data 
+from import_KS_data import import_KS_data
+import process_spikes, spike_motion_plot 
+import process_steps, cluster_steps, pandas_eda
 import plotly.io as pio
 import colorlover as cl
 from numpy import pi
 from pdb import set_trace
-
-# function filters data dictionaries fir desired data
-def filter_data_dict(data_dict, session_date, rat_name, treadmill_speed, treadmill_incline):
-    data_dict_filtered_by_date = dict(filter(lambda item:
-                                str(session_date) in item[0], data_dict.items()))
-    data_dict_filtered_by_ratname = dict(filter(lambda item:
-                                rat_name in item[0], data_dict_filtered_by_date.items()))
-    data_dict_filtered_by_speed = dict(filter(lambda item:
-                                "speed"+str(treadmill_speed).zfill(2) in item[0],
-                                data_dict_filtered_by_ratname.items()))
-    data_dict_filtered_by_incline = dict(filter(lambda item:
-                                "incline"+str(treadmill_incline).zfill(2) in item[0],
-                                data_dict_filtered_by_speed.items()))
-    chosen_data_dict = data_dict_filtered_by_incline
-    return chosen_data_dict
-
-### Chosen Directories
-# ephys directory(ies) that should have 'Record Node ###' inside it
-ephys_directory_list = [
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-03_19-41-47',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-21-22',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-45-13',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
-    ]
-
-KS_results_directory_list = [
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/2022-11-16_16-19-28_myo'
-    ]
-
-# anipose directory(ies) that should have pose-3d folder inside it
-anipose_directory_list = [
-    # '/snel/share/data/anipose/session20220603',
-    # '/snel/share/data/anipose/session20220606',
-    # '/snel/share/data/anipose/session20220608',
-    # '/snel/share/data/anipose/session20220715',
-    # '/snel/share/data/anipose/session20220914',
-    # '/snel/share/data/anipose/session20221116',
-    # '/snel/share/data/anipose/session20221117',
-    '/snel/share/data/anipose/session20221220_128test/'
-    ]
+from config import config as CFG
 
 ### Analysis Parameters ###
 MU_spike_amplitudes_list = [[150.0001,500],[500.0001,1700],[1700.0001,5000]]
@@ -62,17 +21,6 @@ trial_reject_bounds_mm = dict(peak=[-15,15],trough=[-15,15]) #mm, False/Integer/
 trial_reject_bounds_sec = [[0,0.500]] #seconds, time window of step duration outside of which trials get rejected. Examples: [[0, 0.550]] or [[0.550, 0.6]]
 origin_offsets = dict(x=-18,y=bodypart_for_reference,z=135) # Values recorded from origin to treadmill bounds, insert bodypart_for_reference variable, or use zeroes for no offset if bodypart_for_reference is set for one coordinate, it overrides etting and will subtract for that coordinate. Examples: dict((x=-18,y=211,z=135))/dict(x=-87,y=211,z=135)/dict(x=52,y=-310,z=0)/dict(x=bodypart_for_reference,y=211,z=135), can be disbaled with disabled with False
 save_binned_MU_data = False
-
-
-## godzilla ##
-bodyparts_list = ['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
-bodypart_for_alignment = ['palm_L_y']
-session_date=4*['20221116-5'] #3*[220603]/4*[220715]/4*[220914]
-rat_name=4*['godzilla'] #3*['dogerat']/4*['cleopatra']
-treadmill_speed=4*[10] #3*[20]/4*[20]
-treadmill_incline=[0]#0,5,10,15] #[0,5,10]/[0,5,10,15]
-camera_fps=125 #100/125
-vid_length=60 #10/20
 time_frame=[0.05,0.25] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms=10
 bin_width_radian=bin_width_ms*(2*pi)/500 # leave 2*pi numerator and number of bins equals (500/bin_width_ms)
@@ -80,37 +28,16 @@ smoothing_window = 4*[10] # bins
 phase_align=True # True/False, pertains to process_spikes.smooth() and process_spikes.state_space()
 align_to='foot off' # "foot strike"/"foot off"
 
-## cleopatra ##
-# bodyparts_list = ['palm_L_y','palm_L_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
-# bodypart_for_alignment = ['palm_L_y']
-# session_date=4*[220715] #3*[220603]/4*[220715]/4*[220914]
-# rat_name=4*['cleopatra'] #3*['dogerat']/4*['cleopatra']
-# treadmill_speed=4*[20] #3*[20]/4*[20]
-# treadmill_incline=[15]#0,5,10,15] #[0,5,10]/[0,5,10,15]
-# camera_fps=125 #100/125
-# vid_length=10 #10/20
-# time_frame=[0.05,0.95] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
-# bin_width_ms=10
-# bin_width_radian=bin_width_ms*(2*pi)/500 # leave 2*pi numerator and number of bins equals (500/bin_width_ms)
-# smoothing_window = 4*[10] # bins
-# phase_align=True # True/False, pertains to process_spikes.smooth() and process_spikes.state_space()
-# align_to='foot off' # "foot strike"/"foot off"
-
-## dogerat ##
-# bodyparts_list = ['palm_R_y','palm_R_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
-# bodypart_for_alignment = ['palm_R_y']
-# session_date=3*[220603] #3*[220603]/4*[220715]/4*[220914]
-# rat_name=3*['dogerat'] #3*['dogerat']/4*['cleopatra']
-# treadmill_speed=3*[20] #3*[20]/4*[20]
-# treadmill_incline=[0,5,10] #[0,5,10]/[0,5,10,15]
-# camera_fps=100 #100/125
-# vid_length=20 #10/20/30
-# time_frame=[0.05,0.95] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
-# bin_width_ms=1
-# bin_width_radian=bin_width_ms*(2*pi)/500 # leave 2*pi numerator and number of bins equals (500/bin_width_ms)
-# smoothing_window = 3*[10] # bins
-# phase_align=True # True/False, pertains to process_spikes.smooth() and process_spikes.state_space()
-# align_to='foot off' # "foot strike"/"foot off"
+### Chosen Rat ###
+chosen_rat = CFG['rat']['godzilla'] # <-- Choose Rat HERE
+bodyparts_list = chosen_rat['bodyparts_list']
+bodypart_for_alignment = chosen_rat['bodypart_for_alignment']  
+session_date = chosen_rat['session_date'] 
+rat_name = chosen_rat['rat_name'] 
+treadmill_speed = chosen_rat['treadmill_speed'] 
+treadmill_incline = chosen_rat['treadmill_incline'] 
+camera_fps = chosen_rat['camera_fps'] 
+vid_length = chosen_rat['vid_length'] 
 
 ### Plotting Parameters
 plot_type = "sort" # MU_space_stepwise # behavioral_space # sort # bin_and_count # pandas_eda # multi_bin # multi_state_space
@@ -128,19 +55,6 @@ N_colors = 16#len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bod
 # CH_colors = cl.to_rgb(cl.interp(plotly.colors.sequential.Jet,16))
 CH_colors = cl.to_rgb(cl.interp(cl.scales['6']['seq']['Greys'],N_colors))[-1:-(N_colors+1):-1] # black to grey, 16
 MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],N_colors)) # rainbow scale, 32
-# MU_colors = cl.to_rgb(cl.scales['9']['div']['RdYlGn'])
-# MU_colors = plotly.colors.cyclical.HSV
-# MU_colors.reverse()
-# MU_colors = plotly.colors.sequential.Rainbow_r
-# MU_colors = plotly.colors.cyclical.HSV_r
-# MU_colors = plotly.colors.diverging.Portland_r
-# MU_colors = [
-#     'blue', 'green', 'orange', 
-#     'royalblue','forestgreen','firebrick',
-#     'lawngreen', 'greenyellow', 'red',
-#     'darkturquoise','purple','black',
-#     'lightblue','lightgreen','hotpink',
-#     ]
 
 # rotate or reverse colors palettes, if needed
 from collections import deque
@@ -153,18 +67,39 @@ MU_colors.reverse()
 MU_colors= MU_colors[:-1]
 # MU_colors = ['royalblue','green','darkorange','firebrick']
 
-unfiltered_OE_data_dict = import_OE_data.import_OE_data(ephys_directory_list)
+### Chosen Directories
+OE_directory_list = CFG['data_dirs']['OE']
+KS_results_directory_list = CFG['data_dirs']['KS']
+Anipose_directory_list = CFG['data_dirs']['Anipose']
+
+# function filters data dictionaries fir desired data
+def filter_data_dict(data_dict, session_date, rat_name, treadmill_speed, treadmill_incline):
+    data_dict_filtered_by_date = dict(filter(lambda item:
+                                str(session_date) in item[0], data_dict.items()))
+    data_dict_filtered_by_ratname = dict(filter(lambda item:
+                                rat_name in item[0], data_dict_filtered_by_date.items()))
+    data_dict_filtered_by_speed = dict(filter(lambda item:
+                                "speed"+str(treadmill_speed).zfill(2) in item[0],
+                                data_dict_filtered_by_ratname.items()))
+    data_dict_filtered_by_incline = dict(filter(lambda item:
+                                "incline"+str(treadmill_incline).zfill(2) in item[0],
+                                data_dict_filtered_by_speed.items()))
+    chosen_data_dict = data_dict_filtered_by_incline
+    return chosen_data_dict
+
+### Filter Directories
+unfiltered_OE_data_dict = import_OE_data(OE_directory_list)
 OE_data_dict = filter_data_dict(unfiltered_OE_data_dict,
                                 session_date[0], rat_name[0],
                                 str(treadmill_speed[0]).zfill(2),
                                 str(treadmill_incline[0]).zfill(2))
 if sort_method=='kilosort':
-    unfiltered_KS_data_dict = import_KS_data.import_KS_data(KS_results_directory_list)
+    unfiltered_KS_data_dict = import_KS_data(KS_results_directory_list)
     KS_data_dict = filter_data_dict(unfiltered_KS_data_dict,
                                     session_date[0], rat_name[0],
                                     treadmill_speed[0], treadmill_incline[0])
     
-unfiltered_anipose_data_dict = import_anipose_data.import_anipose_data(anipose_directory_list)
+unfiltered_anipose_data_dict = import_anipose_data(Anipose_directory_list)
 anipose_data_dict = filter_data_dict(unfiltered_anipose_data_dict,
             session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0])
 

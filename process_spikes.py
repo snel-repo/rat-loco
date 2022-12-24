@@ -43,24 +43,30 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     return y
 
 # main function for threshold sorting and producing spike indexes
-def sort(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, anipose_data_dict, 
-    bodyparts_list, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, origin_offsets,
-    session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, do_plot,
-    plot_template, MU_colors, CH_colors
-    ):
-
+def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,
+    sort_method,bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,
+    trial_reject_bounds_mm,trial_reject_bounds_sec,origin_offsets,
+    save_binned_MU_data,time_frame,bin_width_ms,smoothing_window,
+    phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
     # format inputs to avoid ambiguities
-    rat_name = str(rat_name).lower()
-    treadmill_speed = str(treadmill_speed).zfill(2)
-    treadmill_incline = str(treadmill_incline).zfill(2)
-    session_parameters = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # extract data from dictionaries
-    chosen_ephys_data_continuous_obj = OE_data_dict[session_parameters]
-    chosen_anipose_df = anipose_data_dict[session_parameters]
+    chosen_ephys_data_continuous_obj = OE_dict[session_ID]
+    chosen_anipose_df = anipose_dict[session_ID]
 
     # create time axes
     ephys_sample_rate = chosen_ephys_data_continuous_obj.metadata['sample_rate']
@@ -84,8 +90,8 @@ def sort(
     #     filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
 
     (processed_anipose_df, foot_strike_idxs, foot_off_idxs, _,
-    step_slice, step_time_slice, ref_bodypart_trace_list) = peak_align_and_filt(
-    anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
+    step_slice, step_time_slice, ref_bodypart_trace_list) = peak_align_and_filt(anipose_dict,
+    bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
     bodypart_ref_filter=bodypart_ref_filter, origin_offsets=origin_offsets, filter_all_anipose=filter_all_anipose,
     session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
     camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
@@ -172,8 +178,8 @@ def sort(
         if filter_ephys not in ['notch','bandpass','both']:
             print('No additional filters applied to voltage signals.')
     elif sort_method == 'kilosort':
-        chosen_KS_data_dict = KS_data_dict[session_parameters]
-        MU_spikes_dict = chosen_KS_data_dict
+        chosen_KS_dict = KS_dict[session_ID]
+        MU_spikes_dict = chosen_KS_dict
     
     # MU_spike_idxs = np.array(MU_spike_idxs,dtype=object).squeeze().tolist()
     
@@ -204,9 +210,9 @@ def sort(
         row_spec_list[len(bodyparts_list)+2] = [{'rowspan': len(MU_spikes_dict)}]
 
     if sort_method=="kilosort":
-        MU_labels = list(KS_data_dict.keys())[0]
+        MU_labels = list(KS_dict.keys())[0]
     elif sort_method=="thresholding":
-        MU_labels = list(OE_data_dict.keys())[0]
+        MU_labels = list(OE_dict.keys())[0]
         
     fig = make_subplots(
         rows=number_of_rows, cols=1,
@@ -215,7 +221,7 @@ def sort(
         # vertical_spacing=0.0,
         # horizontal_spacing=0.02,
         subplot_titles=(
-        f"<b>Locomotion Kinematics: {list(anipose_data_dict.keys())[0]}</b>",
+        f"<b>Locomotion Kinematics: {list(anipose_dict.keys())[0]}</b>",
         f"<b>Neural Activity: {MU_labels}</b>"
         ))
 
@@ -393,12 +399,12 @@ def sort(
         # figs = []
     return (
         MU_spikes_dict, time_axis_for_ephys, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, figs
+        ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_ID, figs
     )
 
 def bin_and_count(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, save_binned_MU_data, do_plot, plot_template, MU_colors, CH_colors
@@ -410,9 +416,9 @@ def bin_and_count(
     assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
     
     (MU_spikes_dict, _, time_axis_for_anipose, ephys_sample_rate,
-     start_video_capture_ephys_idx, step_time_slice_ephys, session_parameters, _) = sort(
-        OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, sort_method, filter_all_anipose, anipose_data_dict, bodyparts_list=bodypart_for_alignment,
+     start_video_capture_ephys_idx, step_time_slice_ephys, session_ID, _) = sort(
+        OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, sort_method, filter_all_anipose, bodyparts_list=bodypart_for_alignment,
         bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, bodypart_ref_filter=bodypart_ref_filter,
         origin_offsets=origin_offsets, session_date=session_date, rat_name=rat_name,
         treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
@@ -422,7 +428,7 @@ def bin_and_count(
 
     # (_, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
     #  step_slice, step_time_slice, _) = peak_align_and_filt(
-    #     anipose_data_dict, bodypart_for_alignment=bodypart_for_alignment,
+    #     bodypart_for_alignment=bodypart_for_alignment,
     #     bodypart_for_reference=bodypart_for_reference, bodypart_ref_filter=bodypart_ref_filter,
     #     origin_offsets=origin_offsets, filter_all_anipose=filter_all_anipose, session_date=session_date,
     #     rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
@@ -431,7 +437,7 @@ def bin_and_count(
     (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
      kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
      post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
-        anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
+        bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
         trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
         rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to, time_frame)
     
@@ -546,6 +552,9 @@ def bin_and_count(
     number_of_bins_in_time_step = np.ceil(ms_duration/bin_width_ms).astype(int)
     bin_width_eph = int(bin_width_ms*(ephys_sample_rate/1000))
     
+    # leave 2*pi numerator and number of bins equals: (500 / bin_width_ms)
+    # WARNING: may need to change denominator constant to achieve correct radian binwidth
+    bin_width_radian = bin_width_ms*(2*np.pi)/500 
     # round up number of bins to prevent index overflows
     number_of_bins_in_2π_step = np.ceil(2*np.pi/bin_width_radian).astype(int)
     bin_width_eph_2π = np.round(
@@ -582,8 +591,8 @@ def bin_and_count(
         rows=1, cols=2,
         shared_xaxes=False,
         subplot_titles=(
-        f"Session Info: {session_parameters}",
-        f"Session Info: {session_parameters}"
+        f"Session Info: {session_ID}",
+        f"Session Info: {session_ID}"
         ))
     for iUnit, iUnitKey in enumerate(MU_spikes_dict.keys()):
         MU_step_aligned_idxs = np.concatenate(
@@ -653,7 +662,7 @@ def bin_and_count(
     fig2.update_layout(
         title_text=
         f'<b>Total Motor Unit Threshold Crossings Across {number_of_steps} Steps</b>\
-        <br><sup>Session Info: {session_parameters}</sup>',
+        <br><sup>Session Info: {session_ID}</sup>',
         # xaxis_title_text='<b>Motor Unit Voltage Thresholds</b>',
         yaxis_title_text='<b>Spike Count</b>',
         # bargap=0., # gap between bars of adjacent location coordinates
@@ -669,8 +678,8 @@ def bin_and_count(
         iplot(fig2)
 
     if save_binned_MU_data is not False:
-        np.save(session_parameters+"_time.npy",MU_spikes_3d_array_binned, allow_pickle=False)
-        np.save(session_parameters+"_phase.npy",MU_spikes_3d_array_binned_2π, allow_pickle=False)
+        np.save(session_ID+"_time.npy",MU_spikes_3d_array_binned, allow_pickle=False)
+        np.save(session_ID+"_phase.npy",MU_spikes_3d_array_binned_2π, allow_pickle=False)
         
     return(
         MU_step_aligned_spike_idxs_dict,
@@ -680,12 +689,12 @@ def bin_and_count(
         MU_spikes_3d_array_binned,
         MU_spikes_3d_array_binned_2π,
         MU_spikes_count_across_all_steps, steps_to_keep_arr,
-        step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
+        step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
     )
 
 def raster(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
@@ -699,10 +708,10 @@ def raster(
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
     MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
+    step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
     ) = bin_and_count(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
@@ -740,7 +749,7 @@ def raster(
     fig.update_layout(
         title_text=
         f'<b>MU Activity Raster for All {number_of_steps} Steps</b>\
-        <br><sup>Session Info: {session_parameters}</sup>',
+        <br><sup>Session Info: {session_ID}</sup>',
         xaxis_title_text=f'<b>Time (ms)</b>',
         yaxis_title_text=f'<b>Step</b>'
         )
@@ -748,7 +757,7 @@ def raster(
     #     fig.update_layout(
     #         title_text=
     #         f'<b>MU Activity Raster for All {number_of_steps} Steps</b>\
-    #         <br><sup>Session Info: {session_parameters}</sup>',
+    #         <br><sup>Session Info: {session_ID}</sup>',
     #         xaxis_title_text=f'<b>Time (ms)</b>',
     #         yaxis_title_text=f'<b>Step (ms)</b>'
     #         )
@@ -764,9 +773,9 @@ def raster(
 
 
 def smooth(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
     filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-    anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
+    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
     trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
     treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,save_binned_MU_data,
     do_plot, phase_align, plot_template, MU_colors, CH_colors):
@@ -778,10 +787,10 @@ def smooth(
     MU_spikes_3d_array_binned,
     MU_spikes_3d_array_binned_2π,
     MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, session_parameters, figs
+    step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
     ) = bin_and_count(
-    OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
-    filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict, bodypart_for_alignment,
+    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
+    filter_all_anipose, bin_width_ms, bin_width_radian, bodypart_for_alignment,
     bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets,
     bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline, camera_fps,
     align_to, vid_length, time_frame, save_binned_MU_data, do_plot=False, plot_template=plot_template,
@@ -841,7 +850,7 @@ def smooth(
     fig.update_layout(
         title_text=
         f'<b>{title_prefix}Aligned MU Activity for All {number_of_steps} Steps</b>\
-        <br><sup>Session Info: {session_parameters}</sup>',
+        <br><sup>Session Info: {session_ID}</sup>',
         xaxis_title_text=f'<b>Bins ({np.round(bin_width,4)}{bin_unit})</b>',
         yaxis_title_text= \
             f'<b>Smoothed MU Activity<br>({smoothing_window} Sample Kernel)</b>',
@@ -868,8 +877,8 @@ def smooth(
     # px.plot(smoothed_MU_df,x="bins",y="")
     
 def state_space(
-            OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+            OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
         bodypart_for_alignment, bodypart_for_reference,
         bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
         session_date, rat_name, treadmill_speed, treadmill_incline,
@@ -877,15 +886,15 @@ def state_space(
         do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors):
     
     (MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs) = smooth(
-        OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-        anipose_data_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
+        bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
         trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
         treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,save_binned_MU_data,
         do_plot=False, phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
         CH_colors=CH_colors)
     
-    session_parameters = \
+    session_ID = \
         f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # select units for plotting
@@ -967,7 +976,7 @@ def state_space(
         fig.update_layout(
             title_text=
             f'<b>{title_prefix}-Aligned MU State Space Activity for Channel {ephys_channel_idxs_list[0]} Across Inclines</b>\
-            <br><b>{session_parameters}</b>')#, Bin Width: {np.round(bin_width,3)}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
+            <br><b>{session_ID}</b>')#, Bin Width: {np.round(bin_width,3)}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
         fig.update_scenes(
             dict(camera=dict(eye=dict(x=-0.3, y=-2, z=0.2)), #the default values are 1.25, 1.25, 1.25
                 xaxis = dict(title_text=f'<b>Unit {plot_units[0]} Activity</b>'),
@@ -986,15 +995,15 @@ def state_space(
     figs = [fig]
     return MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs
 
-def MU_space_stepwise(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
-    filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+def MU_space_stepwise(OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
+    filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
     bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
     origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
     camera_fps, align_to, vid_length, time_frame, do_plot, plot_units, phase_align, plot_template,
     MU_colors, CH_colors):
     
     iPar = 0
-    # session_parameters_lst = []
+    # session_ID_lst = []
     # trialized_anipose_dfs_lst = []
     subtitles = []
     for iTitle in treadmill_incline:
@@ -1005,15 +1014,15 @@ def MU_space_stepwise(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_sp
         (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
          kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
          post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = \
-            trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_reference,
+            trialize_steps(bodypart_for_alignment, bodypart_for_reference,
                            bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
                            origin_offsets, bodyparts_list, filter_all_anipose, session_date[iPar],
                            rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar],
                            camera_fps, align_to, time_frame)
         
         # (MU_smoothed_spikes_3d_array, binned_spike_array, figs) = smooth(
-        # OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
-        # filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window, anipose_data_dict,
+        # OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
+        # filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
         # bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
         # trial_reject_bounds_mm, trial_reject_bounds_sec,origin_offsets, bodyparts_list,
         # session_date[iPar], rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar],
@@ -1021,9 +1030,9 @@ def MU_space_stepwise(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_sp
         # plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
 
         MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs = \
-            state_space(OE_data_dict, KS_data_dict,ephys_channel_idxs_list, MU_spike_amplitudes_list,
+            state_space(OE_dict, KS_dict, anipose_dict,ephys_channel_idxs_list, MU_spike_amplitudes_list,
                     filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
-                    smoothing_window, anipose_data_dict, bodypart_for_alignment,
+                    smoothing_window, bodypart_for_alignment,
                     bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
                     trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date[iPar],
                     rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar], camera_fps,
@@ -1031,11 +1040,11 @@ def MU_space_stepwise(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_sp
                     phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
                     CH_colors=CH_colors)
 
-        # session_parameters = \
+        # session_ID = \
         # f"{session_date[iPar]}_{rat_name[iPar]}_speed{treadmill_speed[iPar]}_incline{treadmill_incline[iPar]}"
         
-        # raster_figs = raster(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        # filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
+        # raster_figs = raster(OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        # filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
         # bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
         # origin_offsets, bodyparts_list, session_date[0], rat_name[0], treadmill_speed[0], treadmill_incline[0],
         # camera_fps, align_to, vid_length, time_frame,
@@ -1140,11 +1149,11 @@ def MU_space_stepwise(OE_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_sp
         # i_rat_name = str(rat_name[iPar]).lower()
         # i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
         # i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
-        # session_parameters_lst.append(
+        # session_ID_lst.append(
         #     f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}")
         # trialized_anipose_dfs_lst.append(trialized_anipose_df)
         # trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
-        #                         np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
+        #                         np.ones(anipose_dict[session_ID_lst[iPar]].shape[0]))
         
         # big_fig[iPar].add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
         

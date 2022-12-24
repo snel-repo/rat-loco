@@ -11,44 +11,59 @@ from open_ephys.analysis import Session
 #     idx = (np.abs(array - value)).argmin()
 #     return array[idx]
 
-def import_KS_data(directory_list): 
-    primary_dir = os.getcwd()
-    output = {}  # stores kilosort ephys spike cluster id data
-    sessionIDs_dict = {} # stores .info Session IDs of each recording in order under directory keys 
+def import_KS_data(chosen_rat, CFG): 
+    session_IDs_dict = {} # stores .info Session IDs of each recording in order under directory keys 
+    directory_list = CFG['data_dirs']['KS']
     for directory in directory_list:
         recording_lengths_arr_list = []
         spikeClusters_arr = []
         spikeTimes_arr = []
         clusterIDs = []
-        sessionIDs_temp = []
+        session_IDs_temp = []
         session = Session(directory) # copy over structure.oebin from recording folder to recording99 folder or errors 
         clusterIDs_ephys_spikeTimes = {}
         cluster_id_ephys_data_dict = {}
-        for i in range((len(session.recordnodes[0].recordings)) - 1): # loops through all individual recording folders
-            timestamps_file = session.recordnodes[0].recordings[i].directory + "/continuous/Acquisition_Board-100.Rhythm Data/sample_numbers.npy"
+        for iRec in range((len(session.recordnodes[0].recordings))): # loops through all individual recording folders
+            # skip recording99
+            if 'recording99' in session.recordnodes[0].recordings[iRec].directory:
+                continue
+            temp_dir = os.listdir(session.recordnodes[0].recordings[iRec].directory)
+            timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Acquisition_Board-100.Rhythm Data/sample_numbers.npy"
             recording_lengths_arr_list.append(len(np.load(timestamps_file)) * 16)
-            temp_dir = os.listdir(session.recordnodes[0].recordings[i].directory)
             if any(".info" in file for file in temp_dir): # checks if .info file exists
-                session_ID = [i for i in temp_dir if ".info" in i] 
-                sessionIDs_temp.append(session_ID[0][0:-5])
+                session_ID = [i for i in temp_dir if ".info" in i][0]
+                # checks for session_ID match to desired settings
+                if session_ID.__contains__("incline"+str(CFG['rat'][chosen_rat]['treadmill_incline'][0]).zfill(2)):
+                    if session_ID.__contains__("speed"+str(CFG['rat'][chosen_rat]['treadmill_speed'][0]).zfill(2)):
+                        if session_ID.__contains__(CFG['rat'][chosen_rat]['session_date'][0]):
+                            if session_ID.__contains__(chosen_rat):
+                                session_IDs_temp.append(session_ID.split('.')[0])
+                            else:
+                                continue
+                        else:
+                            continue
+                    else:
+                        continue
+                else:
+                    continue
             else:
-                print(session.recordnodes[0].recordings[i].directory + "has no .info file")
+                print(session.recordnodes[0].recordings[iRec].directory + "has no .info file")
                 return
-        sessionIDs_dict[directory] = sessionIDs_temp # adds list of session IDs to dict under directory key
+        if len(session_IDs_temp)==0:
+            continue
+        session_IDs_dict[directory] = session_IDs_temp # adds list of session IDs to dict under directory key
         print(recording_lengths_arr_list)
         recording_lengths_arr = np.array(recording_lengths_arr_list)/16
         if any("KilosortResults" in folder for folder in os.listdir(session.recordnodes[0].recordings[-1].directory)):
             kilosort_files = []
             kilosort_folder = session.recordnodes[0].recordings[-1].directory + "/KilosortResults"
             for root, dirs, files in os.walk(kilosort_folder):
-                if "spike_clusters.npy" in files:
-                    kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
-                elif "spike_clusters.mat" in files:
+                if "spike_clusters.mat" in files and "spike_times.mat" in files:
                     kilosort_files.append(os.path.join(root, "spike_clusters.mat"))
-                if "spike_times.npy" in files:
-                    kilosort_files.append(os.path.join(root, "spike_times.npy"))
-                elif "spike_times.mat" in files:
                     kilosort_files.append(os.path.join(root, "spike_times.mat"))
+                elif "spike_clusters.npy" in files and "spike_times.npy" in files:
+                    kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
+                    kilosort_files.append(os.path.join(root, "spike_times.npy"))
             
             if len(kilosort_files) != 2:
                 print("KiloSort Spike Times and Spike Clusters not found!")
@@ -67,17 +82,16 @@ def import_KS_data(directory_list):
             clusterIDs = np.unique(spikeClusters_arr)
             print(spikeTimes_arr[0])
             print(16 * (spikeTimes_arr[-1] - spikeTimes_arr[0]))
-            
-            i = 0
+            iRec = 0
             sum = 0
-            for sessionID in sessionIDs_dict[directory]:
-                print(sessionID)
+            for session_ID in session_IDs_dict[directory]:
+                print(session_ID)
                 for (id, length) in zip(clusterIDs, recording_lengths_arr):
                     clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[np.where(spikeClusters_arr==id)]
                     clusterIDs_ephys_spikeTimes[id] = clusterIDs_ephys_spikeTimes_id_all[np.where(
                                                                 clusterIDs_ephys_spikeTimes_id_all<length)]
-                cluster_id_ephys_data_dict[sessionID] = clusterIDs_ephys_spikeTimes
-            print(cluster_id_ephys_data_dict.keys())
+                cluster_id_ephys_data_dict[session_ID] = clusterIDs_ephys_spikeTimes
+            print("Loaded KiloSort files: ", cluster_id_ephys_data_dict.keys())
                 
             
             

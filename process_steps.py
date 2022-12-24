@@ -71,25 +71,26 @@ def peak_align_and_filt(
     ref_aligned_df = bodypart_anipose_df.copy()
     ref_bodypart_trace_list = []
     if origin_offsets is not False:
+        iDim_map = dict(x=0,y=1,z=2)
         for iDim in bodypart_substr:
             # if iDim == 'Labels': continue # skip if Labels column
             body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
             # iDim_cols = [str for str in bodypart_cols if str in [iDim]]
-            if type(origin_offsets[iDim[-1]]) is int:
+            if type(origin_offsets[iDim_map[iDim[-1]]]) is int:
                 ref_aligned_df[body_dim_cols] = \
-                    bodypart_anipose_df[body_dim_cols]+origin_offsets[iDim[-1]]
-            elif type(origin_offsets[iDim[-1]]) is list and type(origin_offsets[iDim[-1]][0]) is str:
+                    bodypart_anipose_df[body_dim_cols]+origin_offsets[iDim_map[iDim[-1]]]
+            elif type(origin_offsets[iDim_map[iDim[-1]]]) is str:
                 if bodypart_ref_filter:
                     ref_bodypart_trace_list.append(butter_lowpass_filter(
-                        data=bodypart_anipose_df[bodypart_for_reference[0]+iDim],
+                        data=bodypart_anipose_df[bodypart_for_reference+iDim],
                         cutoff=bodypart_ref_filter, fs=camera_fps, order=1))
                 else:
-                    ref_bodypart_trace_list.append(bodypart_anipose_df[bodypart_for_reference[0]+iDim])
+                    ref_bodypart_trace_list.append(bodypart_anipose_df[bodypart_for_reference+iDim])
                 for iCol in body_dim_cols:
                     ref_aligned_df[iCol] = \
                         bodypart_anipose_df[iCol] - ref_bodypart_trace_list[-1]
             else:
-                raise TypeError('origin_offsets variable must be either type `int`, or set as `bodypart_for_reference` (variable which is a list containing a str)')
+                raise TypeError("origin_offsets variable must be either type `int`, or set as a base bodypart str, such as 'tailbase'")
             # ref_aligned_df = bodypart_anipose_df # do not subtract any reference
             # ref_aligned_df[iCol] = \
             #     bodypart_anipose_df[iCol] + ref_bodypart_trace_list # add measured offsets
@@ -269,22 +270,23 @@ def trialize_steps(anipose_data_dict, bodypart_for_alignment, bodypart_for_refer
                 print(f"{align_to} bounds for {iBodypart}: {np.round(lower_bound,decimals=2)} to {np.round(upper_bound,decimals=2)}")
             drop_trial_set.update(all_trial_set - keep_trial_set)
             print(f'Rejecting trials: {drop_trial_set}')
-        elif type(trial_reject_bounds_mm) is dict:
+        elif type(trial_reject_bounds_mm) is list:
             # For each feature, assert that the first list element is less than the second list element
-            assert trial_reject_bounds_mm['peak'][0]<trial_reject_bounds_mm['peak'][1], \
-                "If `trial_reject_bounds_mm` is a dict, use form: dict(peak=[10,40],trough=[-10,25]). First list element must be less than second."
-            assert trial_reject_bounds_mm['trough'][0]<trial_reject_bounds_mm['trough'][1], \
-                "If `trial_reject_bounds_mm` is a dict, use form: dict(peak=[10,40],trough=[-10,25]). First list element must be less than second."
+            assert trial_reject_bounds_mm[0][0]<trial_reject_bounds_mm[0][1], \
+                "If `trial_reject_bounds_mm` is a 2d list, use form: [[10,40],[-10,25]] for maximal allowed Peak +/- and Trough +/- values. First of paired list value must be less than second."
+            assert trial_reject_bounds_mm[1][0]<trial_reject_bounds_mm[1][1], \
+                "If `trial_reject_bounds_mm` is a 2d list, use form: [[10,40],[-10,25]] for maximal allowed Peak +/- and Trough +/- values. First of paired list value must be less than second."
             # loop through both keys of the dictionary, keep trials when all bodyparts are constrained
-            for (iKey, df_peak_or_trough) in zip(trial_reject_bounds_mm.keys(),df_peak_and_trough_list):
+            pair_description = ['Peak', 'Trough']
+            for ii, (trial_reject_bounds_mm_pair, df_peak_or_trough) in enumerate(zip(trial_reject_bounds_mm,df_peak_and_trough_list)):
                 for iBodypart in bodyparts_list:
-                    lower_bound = df_peak_or_trough.filter(like=iBodypart).median() + trial_reject_bounds_mm[iKey][0]
-                    upper_bound = df_peak_or_trough.filter(like=iBodypart).median() + trial_reject_bounds_mm[iKey][1]
+                    lower_bound = df_peak_or_trough.filter(like=iBodypart).median() + trial_reject_bounds_mm_pair[0]
+                    upper_bound = df_peak_or_trough.filter(like=iBodypart).median() + trial_reject_bounds_mm_pair[1]
                     trials_above_lb.update(true_step_idx[(df_peak_or_trough.filter(like=iBodypart)>lower_bound).values])
                     trials_below_ub.update(true_step_idx[(df_peak_or_trough.filter(like=iBodypart)<upper_bound).values])
                     # get trial idxs between bounds, loop through bodyparts, remove trials outside
                     keep_trial_set.intersection_update(trials_above_lb & trials_below_ub)
-                    print(f"{iKey} bounds for {iBodypart}: {np.round(lower_bound,decimals=2)} to {np.round(upper_bound,decimals=2)}")
+                    print(f"{pair_description[ii]} bounds for {iBodypart}: {np.round(lower_bound,decimals=2)} to {np.round(upper_bound,decimals=2)}")
                 trials_above_lb, trials_below_ub = set(), set()
                 drop_trial_set.update(all_trial_set - keep_trial_set)
                 print(f'Rejecting trials: {drop_trial_set}')
@@ -320,7 +322,7 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         time_frame, save_binned_MU_data, MU_colors, CH_colors):
     
     iPar = 0
-    session_parameters_lst = []
+    session_ID_lst = []
     trialized_anipose_dfs_lst = []
     subtitles = []
     for iTitle in treadmill_incline:
@@ -347,11 +349,11 @@ def behavioral_space(anipose_data_dict, bodypart_for_alignment, bodypart_for_ref
         i_rat_name = str(rat_name[iPar]).lower()
         i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
         i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
-        session_parameters_lst.append(
+        session_ID_lst.append(
             f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}")
         trialized_anipose_dfs_lst.append(trialized_anipose_df)
         trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
-                                np.ones(anipose_data_dict[session_parameters_lst[iPar]].shape[0]))
+                                np.ones(anipose_data_dict[session_ID_lst[iPar]].shape[0]))
         
         # get trial averages by filtering for all columns that match
         trial_ave_lst = []

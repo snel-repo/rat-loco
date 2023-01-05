@@ -1,5 +1,5 @@
 # TOML configuration document
-title = "Folder, Rat, Analysis, and Plotting Configurations"
+title = "Directory, Rat, Analysis, and Plotting Configurations"
 
 [data_dirs]
 # OpenEphys folders below (list of strings)
@@ -11,14 +11,16 @@ OE = [
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
     ]
 # KiloSort folders below (list of strings)
 # should have the "Record Node ###" folder inside it, and
 # "KilosortResults" in the "recording99" folder
 KS = [
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/2022-11-16_16-19-28_myo'
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/godzilla/2022-11-16_16-19-28_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/godzilla/2022-11-17_17-08-07_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/cleopatra/2022-07-15_15-16-47_myo/'
     ]
 # Anipose folders below (list of strings)
 # should have the pose-3d folder inside it
@@ -30,15 +32,15 @@ anipose = [
     # '/snel/share/data/anipose/session20220914',
     # '/snel/share/data/anipose/session20221116',
     # '/snel/share/data/anipose/session20221117',
-    '/snel/share/data/anipose/session20221220_600test/'
+    '/snel/share/data/anipose/session20221220_128test/'
 ]
 
 [rat]
 ### Rat-specific configurations
 [rat.cleopatra]
-bodyparts_list = ['palm_L_y','palm_L_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodyparts_list = ['palm_L_y']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
-session_date=['220715']
+session_date=['20220715']
 treadmill_speed=[20]
 treadmill_incline=[15]
 camera_fps=125 #125 FPS
@@ -47,7 +49,7 @@ vid_length=10 #10/20 seconds
 [rat.dogerat]
 bodyparts_list = ['palm_R_y','palm_R_z']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
 bodypart_for_alignment = ['palm_R_y']
-session_date=['220603']
+session_date=['20220603']
 treadmill_speed=[20]
 treadmill_incline=[0]
 camera_fps=100 #100 FPS
@@ -56,7 +58,7 @@ vid_length=20 #10/20/30 seconds
 [rat.godzilla]
 bodyparts_list = ['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
 bodypart_for_alignment = ['palm_L_y']
-session_date = ['20221116-5']
+session_date = ['20221117-4']
 treadmill_speed = [10]
 treadmill_incline = [0]
 camera_fps = 125 #125 FPS
@@ -64,7 +66,7 @@ vid_length = 60 #30/60 seconds
 
 [analysis]
 MU_spike_amplitudes_list = [[150.0001,500],[500.0001,1700],[1700.0001,5000]]
-ephys_channel_idxs_list = [14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
+ephys_channel_idxs_list = [13,16]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
 filter_ephys = 'notch' # 'bandpass' # 'both' # notch is 60Hz and bandpass is 350-7000Hz
 sort_method = 'kilosort' # 'kilosort'/'thresholding'
 bodypart_for_reference = 'tailbase' # choose bodypart to use as origin, without _x/_y/_z suffix, plug into origin_offsets as a value to subtract for that coordinate

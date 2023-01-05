@@ -1,19 +1,18 @@
 import pandas as pd
-from pandas_profiling import ProfileReport
 from process_steps import peak_align_and_filt
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as colormap
 from matplotlib.colors import ListedColormap
 from plotly.offline import iplot
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.signal import find_peaks, butter, filtfilt, iirnotch, coherence
-from scipy.ndimage import gaussian_filter1d
-from pdb import set_trace
 import colorlover as cl
+# from pandas_profiling import ProfileReport
+# import matplotlib.pyplot as plt
+# import matplotlib.cm as colormap
+# import plotly.graph_objects as go
+# from plotly.subplots import make_subplots
+# from scipy.signal import find_peaks, butter, filtfilt, iirnotch, coherence
+# from scipy.ndimage import gaussian_filter1d
+# from pdb import set_trace
 
 def pandas_eda(
         ephys_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,

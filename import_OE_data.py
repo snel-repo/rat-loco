@@ -73,10 +73,9 @@ def import_OE_data(chosen_rat, CFG):
     # plt.xlabel("Time (s)")
     # plt.title(r'Checking Peaks for SYNC')
     # plt.show()
-    
     if len(list_of_session_IDs) == 0:
         raise FileNotFoundError(
-        errno.ENOENT, os.strerror(errno.ENOENT), "No '.info' file was found.")
+        errno.ENOENT, os.strerror(errno.ENOENT), "No '.info' file matching your criteria was found. It could be wrong rat, speed, incline, etc.")
     
     if len(continuous_ephys_data_list)==1:
         continuous_ephys_data_list = continuous_ephys_data_list[0]

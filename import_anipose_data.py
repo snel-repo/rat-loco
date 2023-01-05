@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-from pdb import set_trace
 
 def _read_pose_3d_data(path_to_pose_3d_csv):
     print(f"Reading file(s) into DataFrame: {path_to_pose_3d_csv.name}")

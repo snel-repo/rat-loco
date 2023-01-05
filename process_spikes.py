@@ -1,12 +1,10 @@
 from process_steps import peak_align_and_filt, trialize_steps
-import pandas as pd
 import numpy as np
 from plotly.offline import iplot
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
-from pdb import set_trace
 # from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
 # from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -73,10 +71,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
     time_axis_for_ephys = np.arange(
         round(len(chosen_ephys_data_continuous_obj.samples))
         )/ephys_sample_rate
-    
     # find the beginning of the camera SYNC pulse         
     filtered_sync_channel = butter_highpass_filter(
-        data=chosen_ephys_data_continuous_obj.samples[:,-1], cutoff=50, fs=30000, order=2)
+        data=chosen_ephys_data_continuous_obj.samples[:,16], cutoff=50, fs=30000, order=2)
     start_video_capture_ephys_idx = find_peaks(filtered_sync_channel,height=0.3)[0][0]
     time_axis_for_anipose = np.arange(0,vid_length,1/camera_fps)+ \
                                         time_axis_for_ephys[start_video_capture_ephys_idx]
@@ -200,14 +197,15 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
         row_spec_list[0] = [{'rowspan': len(bodyparts_list)}]
         row_spec_list[len(bodyparts_list)] = [{'rowspan': len(ephys_channel_idxs_list)}]
         row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
-        [{'rowspan': number_of_channels//2+1}]
+            [{'rowspan': number_of_channels//2+1}]
     elif sort_method == 'kilosort':
         number_of_channels = 1
-        number_of_rows = len(bodyparts_list)+len(MU_spikes_dict)+2
+        number_of_rows = len(bodyparts_list)+len(ephys_channel_idxs_list)+len(MU_spikes_dict)//6+1
         row_spec_list = number_of_rows*[[None]]
         row_spec_list[0] = [{'rowspan': len(bodyparts_list)}]
-        row_spec_list[len(bodyparts_list)] = [{'rowspan': 2}]
-        row_spec_list[len(bodyparts_list)+2] = [{'rowspan': len(MU_spikes_dict)}]
+        row_spec_list[len(bodyparts_list)] = [{'rowspan': len(ephys_channel_idxs_list)}]
+        row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
+            [{'rowspan': len(MU_spikes_dict)//6+1}]
 
     if sort_method=="kilosort":
         MU_labels = list(KS_dict.keys())[0]
@@ -327,12 +325,14 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
         for iUnit, iUnitKey in enumerate(UnitKeys):
             if channel_number not in [-1,16]:
                 if sort_method == 'thresholding':
-                    MU_spikes_dict_for_unit = MU_spikes_dict[str(channel_number)][iUnitKey][:]
-                    row2 = len(bodyparts_list)+len(ephys_channel_idxs_list)+1
+                    MU_spikes_dict_for_unit = MU_spikes_dict[str(channel_number)][iUnitKey][:]+step_time_slice_ephys.start
                 elif sort_method == 'kilosort':
-                    MU_spikes_dict_for_unit = MU_spikes_dict[iUnitKey][:][
-                        np.where(MU_spikes_dict[iUnitKey][:]+step_time_slice_ephys.start<len(time_axis_for_ephys))]
-                    row2 = len(bodyparts_list)+3
+                    MU_spikes_dict_for_unit = MU_spikes_dict[iUnitKey][:] if CFG['analysis']['time_frame']==1 \
+                        else MU_spikes_dict[iUnitKey][:][np.where(
+                            (MU_spikes_dict[iUnitKey][:] > step_time_slice_ephys.start) &
+                            (MU_spikes_dict[iUnitKey][:] < step_time_slice_ephys.stop)
+                        )]
+                row2 = len(bodyparts_list)+len(ephys_channel_idxs_list)+1
                 # spike_idx_in_time_frame = np.where((MU_spikes_dict[str(channel_number)][iUnitKey]
                 #                            >= step_idx_ephys_time[0]-start_video_capture_ephys_idx) &
                 #                           (MU_spikes_dict[str(channel_number)][iUnitKey]
@@ -341,9 +341,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 # plot spike locations onto each selected ephys trace
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
-                        MU_spikes_dict_for_unit+step_time_slice_ephys.start],
+                        MU_spikes_dict_for_unit],
                     y=chosen_ephys_data_continuous_obj.samples[
-                        MU_spikes_dict_for_unit+step_time_slice_ephys.start,
+                        MU_spikes_dict_for_unit,
                         channel_number]-5000*iChannel,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',
@@ -355,7 +355,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 # plot isolated spikes into raster plot for each selected ephys trace
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
-                        MU_spikes_dict_for_unit+step_time_slice_ephys.start],
+                        MU_spikes_dict_for_unit],
                     y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys]))-unit_counter,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',

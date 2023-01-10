@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
+from inspect import stack
 # from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
 # from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -44,11 +45,10 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,
-    sort_method,bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,
-    trial_reject_bounds_mm,trial_reject_bounds_sec,origin_offsets,
-    save_binned_MU_data,time_frame,bin_width_ms,smoothing_window,
-    phase_align,align_to) = CFG['analysis'].values()
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -61,6 +61,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
     treadmill_speed = str(treadmill_speed[0]).zfill(2)
     treadmill_incline = str(treadmill_incline[0]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     # extract data from dictionaries
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
@@ -86,24 +89,22 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
     # else: # do not filter
     #     filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
 
-    (processed_anipose_df, foot_strike_idxs, foot_off_idxs, _,
-    step_slice, step_time_slice, ref_bodypart_trace_list) = peak_align_and_filt(anipose_dict,
-    bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference,
-    bodypart_ref_filter=bodypart_ref_filter, origin_offsets=origin_offsets, filter_all_anipose=filter_all_anipose,
-    session_date=session_date, rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
-    camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
+    (processed_anipose_df, foot_strike_idxs, foot_off_idxs, _, step_slice, step_time_slice,
+     ref_bodypart_trace_list) = peak_align_and_filt(chosen_anipose_df, bodypart_for_alignment,
+                                    bodypart_for_reference, bodypart_ref_filter, origin_offsets,
+                                    filter_all_anipose, session_date, rat_name, treadmill_speed,
+                                    treadmill_incline, session_ID, camera_fps, align_to, time_frame
+                                    )
     
-    foot_strike_slice_idxs = foot_strike_idxs[step_slice]
-    # foot_strike_idxs[np.where(
-    #     (foot_strike_idxs >= step_time_slice.start) &
-    #     (foot_strike_idxs <= step_time_slice.stop)
-    # )]
-    
-    foot_off_slice_idxs = foot_off_idxs[step_slice]
-    # foot_off_idxs[np.where(
-    #     (foot_off_idxs >= step_time_slice.start) &
-    #     (foot_off_idxs <= step_time_slice.stop)
-    # )]
+    # filter step peaks/troughs to be within chosen time_frame, but
+    # only when time_frame=1 is not indicating to use the full dataset
+    if CFG['analysis']['time_frame']!=1:
+        foot_strike_slice_idxs = foot_strike_idxs[np.where(
+            (foot_strike_idxs >= step_time_slice.start) &
+            (foot_strike_idxs <= step_time_slice.stop))]
+        foot_off_slice_idxs = foot_off_idxs[np.where(
+            (foot_off_idxs >= step_time_slice.start) &
+            (foot_off_idxs <= step_time_slice.stop))]
     
     # foot_strike_slice_idxs = [
     #     foot_strike_idxs[int((sliced_step_stats['count']-1)*time_frame[0])],
@@ -232,7 +233,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 # filtered signal plot (used for alignment)
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[step_time_slice],
-                    y=processed_anipose_df[bodypart_for_alignment[0]][step_time_slice], # + 25*bodypart_counter, # 25 mm spread
+                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][step_time_slice],1),
                     name=bodyparts_list[bodypart_counter]+' processed' if filter_all_anipose or origin_offsets
                         else bodyparts_list[bodypart_counter],
                     mode='lines',
@@ -243,7 +244,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 # foot strikes
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[foot_strike_slice_idxs],
-                    y=processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],
+                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],1),
                     name=bodyparts_list[bodypart_counter]+' strike',
                     mode='markers',
                     marker = dict(color='black'),
@@ -254,7 +255,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 # foot offs               
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[foot_off_slice_idxs],
-                    y=processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs],
+                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs],1),
                     name=bodyparts_list[bodypart_counter]+' off',
                     mode='markers',
                     marker = dict(color='blue'),
@@ -267,7 +268,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 if origin_offsets:
                     fig.add_trace(go.Scatter(
                         x=time_axis_for_anipose[step_time_slice],
-                        y=processed_anipose_df[name][step_time_slice], # + 25*bodypart_counter,
+                        y=np.round(processed_anipose_df[name][step_time_slice],1), # + 25*bodypart_counter,
                         name=bodyparts_list[bodypart_counter]+' processed',
                         mode='lines',
                         opacity=.9,
@@ -277,7 +278,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 else:
                     fig.add_trace(go.Scatter(
                         x=time_axis_for_anipose[step_time_slice],
-                        y=values.values[step_time_slice], # + 25*bodypart_counter,
+                        y=np.round(values.values[step_time_slice],1), # + 25*bodypart_counter,
                         name=bodyparts_list[bodypart_counter],
                         mode='lines',
                         opacity=.9,
@@ -285,19 +286,19 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                         row=1, col=1,
                         )
                 bodypart_counter += 1 # increment for each matching bodypart
-    # if bodypart_ref_filter and origin_offsets is not False:
-    #     # plot x/y/z reference trace
-    #     dims = [key for key in origin_offsets.keys() if type(origin_offsets[key]) is not int]
-    #     for dim, ref_trace in zip(dims, ref_bodypart_trace_list):
-    #         fig.add_trace(go.Scatter(
-    #             x=time_axis_for_anipose[step_time_slice],
-    #             y=ref_trace[step_time_slice],
-    #             name=f"Ref: {bodypart_for_reference[0]}_{dim}, {bodypart_ref_filter}Hz lowpass",
-    #             mode='lines',
-    #             opacity=.9,
-    #             line=dict(width=3,color="lightgray",dash='dash')),
-    #             row=1, col=1
-    #             )
+    if bodypart_ref_filter and origin_offsets is not False:
+        # plot x/y/z reference trace
+        dims = [key for key in origin_offsets.keys() if type(origin_offsets[key]) is not int]
+        for dim, ref_trace in zip(dims, ref_bodypart_trace_list):
+            fig.add_trace(go.Scatter(
+                x=time_axis_for_anipose[step_time_slice],
+                y=np.round(ref_trace[step_time_slice],1),
+                name=f"Ref: {bodypart_for_reference}_{dim}, {bodypart_ref_filter}Hz lowpass",
+                mode='lines',
+                opacity=.9,
+                line=dict(width=3,color="lightgray",dash='dash')),
+                row=1, col=1
+                )
     # initialize counter to keep track of total unit count across all channels
     unit_counter = np.int16(0)
     # plot all ephys traces and/or SYNC channel
@@ -305,12 +306,12 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
         fig.add_trace(go.Scatter(
             x=time_axis_for_ephys[step_time_slice_ephys],
             # if statement provides different scalings and offsets for ephys vs. SYNC channel
-            y=(chosen_ephys_data_continuous_obj.samples[
+            y=np.round((chosen_ephys_data_continuous_obj.samples[
                 step_time_slice_ephys,channel_number] - 5000*iChannel
                 if channel_number not in [-1,16]
                 else (chosen_ephys_data_continuous_obj.samples[
                     step_time_slice_ephys,channel_number]+4)*0.5e3
-                ),
+                )),
             name=f"CH{channel_number}" if channel_number not in [-1,16] else "SYNC",
             mode='lines',
             marker = dict(color=CH_colors[color_stride*unit_counter]),
@@ -342,9 +343,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
                         MU_spikes_dict_for_unit],
-                    y=chosen_ephys_data_continuous_obj.samples[
+                    y=np.round(chosen_ephys_data_continuous_obj.samples[
                         MU_spikes_dict_for_unit,
-                        channel_number]-5000*iChannel,
+                        channel_number]-5000*iChannel),
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',
                     marker = dict(color=MU_colors[color_stride*unit_counter]),
@@ -356,7 +357,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
                         MU_spikes_dict_for_unit],
-                    y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys]))-unit_counter,
+                    y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys])).astype(np.int16)-unit_counter,
                     name=f"CH{channel_number}, Unit {iUnit}",
                     mode='markers',
                     marker_symbol='line-ns',
@@ -398,33 +399,42 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
     # else:
         # figs = []
     return (
-        MU_spikes_dict, time_axis_for_ephys, time_axis_for_anipose,
+        MU_spikes_dict, time_axis_for_ephys, chosen_anipose_df, time_axis_for_anipose,
         ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_ID, figs
     )
 
-def bin_and_count(
-    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
-    origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data, do_plot, plot_template, MU_colors, CH_colors
-    ):
+def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
+    # format inputs to avoid ambiguities
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     # check inputs for problems
+    if 16 in ephys_channel_idxs_list:
+        ephys_channel_idxs_list.remove(16)
     assert len(ephys_channel_idxs_list)==1, \
     "ephys_channel_idxs_list should only be 1 channel, idiot! :)"
     assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
     
-    (MU_spikes_dict, _, time_axis_for_anipose, ephys_sample_rate,
-     start_video_capture_ephys_idx, step_time_slice_ephys, session_ID, _) = sort(
-        OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, sort_method, filter_all_anipose, bodyparts_list=bodypart_for_alignment,
-        bodypart_for_alignment=bodypart_for_alignment, bodypart_for_reference=bodypart_for_reference, bodypart_ref_filter=bodypart_ref_filter,
-        origin_offsets=origin_offsets, session_date=session_date, rat_name=rat_name,
-        treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
-        camera_fps=camera_fps, align_to=align_to, vid_length=vid_length,
-        time_frame=time_frame, do_plot=False, # change T/F whether to plot sorting plots also
-        plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)    
+    (MU_spikes_dict, _, chosen_anipose_df, _, ephys_sample_rate, _, _, session_ID,_) = sort(
+        chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
 
     # (_, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
     #  step_slice, step_time_slice, _) = peak_align_and_filt(
@@ -437,9 +447,10 @@ def bin_and_count(
     (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
      kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
      post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
-        bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-        trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, filter_all_anipose, session_date,
-        rat_name, treadmill_speed, treadmill_incline, camera_fps, align_to, time_frame)
+        chosen_anipose_df, bodypart_for_alignment, bodypart_for_reference,
+        bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
+        filter_all_anipose, session_date, rat_name, treadmill_speed, treadmill_incline, session_ID,
+        camera_fps, align_to, time_frame)
     
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
     if sort_method == 'thresholding':
@@ -554,7 +565,7 @@ def bin_and_count(
     
     # leave 2*pi numerator and number of bins equals: (500 / bin_width_ms)
     # WARNING: may need to change denominator constant to achieve correct radian binwidth
-    bin_width_radian = bin_width_ms*(2*np.pi)/500 
+    bin_width_radian = bin_width_ms*(2*np.pi)/num_rad_bins 
     # round up number of bins to prevent index overflows
     number_of_bins_in_2π_step = np.ceil(2*np.pi/bin_width_radian).astype(int)
     bin_width_eph_2π = np.round(
@@ -693,29 +704,40 @@ def bin_and_count(
     )
 
 def raster(
-    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
-    origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
-    do_plot, plot_template, MU_colors, CH_colors
+    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
     ):
     
     (MU_step_aligned_spike_idxs_dict,
-    MU_step_aligned_spike_counts_dict,
-    MU_step_2π_warped_spike_idxs_dict,
-    MU_spikes_3d_array_ephys_time,
-    MU_spikes_3d_array_binned,
-    MU_spikes_3d_array_binned_2π,
-    MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
-    ) = bin_and_count(
-    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
-    origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
-    do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
+        MU_step_aligned_spike_counts_dict,
+        MU_step_2π_warped_spike_idxs_dict,
+        MU_spikes_3d_array_ephys_time,
+        MU_spikes_3d_array_binned,
+        MU_spikes_3d_array_binned_2π,
+        MU_spikes_count_across_all_steps, steps_to_keep_arr,
+        step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
+    ) = bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
+    
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
+    # format inputs to avoid ambiguities
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     number_of_steps = MU_spikes_3d_array_ephys_time.shape[0]
     samples_per_step = MU_spikes_3d_array_ephys_time.shape[1]
@@ -773,12 +795,8 @@ def raster(
 
 
 def smooth(
-    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-    trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
-    treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,save_binned_MU_data,
-    do_plot, phase_align, plot_template, MU_colors, CH_colors):
+    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+    ):
     
     (MU_step_aligned_spike_idxs_dict,
     MU_step_aligned_spike_counts_dict,
@@ -789,17 +807,35 @@ def smooth(
     MU_spikes_count_across_all_steps, steps_to_keep_arr,
     step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
     ) = bin_and_count(
-    OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
-    filter_all_anipose, bin_width_ms, bin_width_radian, bodypart_for_alignment,
-    bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets,
-    bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline, camera_fps,
-    align_to, vid_length, time_frame, save_binned_MU_data, do_plot=False, plot_template=plot_template,
-    MU_colors=MU_colors, CH_colors=CH_colors)
+        chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+        )
+    
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
+    # format inputs to avoid ambiguities
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     # initialize 3d numpy array with shape: Steps x Bins x Units
     if phase_align is True:
         binned_spike_array = MU_spikes_3d_array_binned_2π
-        bin_width = bin_width_radian
+        bin_width = bin_width_ms*(2*np.pi)/num_rad_bins
         bin_unit = ' radians'
         title_prefix = 'Phase-'
     else:
@@ -860,7 +896,7 @@ def smooth(
     
     if do_plot:
         iplot(fig)
-    
+  
     # put in a list for compatibility with calling functions
     figs = [fig]
     
@@ -877,25 +913,35 @@ def smooth(
     # px.plot(smoothed_MU_df,x="bins",y="")
     
 def state_space(
-            OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-        bodypart_for_alignment, bodypart_for_reference,
-        bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
-        session_date, rat_name, treadmill_speed, treadmill_incline,
-        camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
-        do_plot, plot_units, phase_align, plot_template, MU_colors, CH_colors):
+            chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+            ):
     
-    (MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs) = smooth(
-        OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
-        filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-        bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-        trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date, rat_name,
-        treadmill_speed, treadmill_incline, camera_fps, align_to, vid_length, time_frame,save_binned_MU_data,
-        do_plot=False, phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
-        CH_colors=CH_colors)
+    (MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr,
+     figs) = smooth(
+        chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+        )
     
-    session_ID = \
-        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
+    # format inputs to avoid ambiguities
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     # select units for plotting
     sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
@@ -906,7 +952,7 @@ def state_space(
     # detect number of identified units
     number_of_units = sliced_MU_smoothed_3d_array.any(1).any(0).sum()
     if phase_align is True:
-        bin_width = bin_width_radian
+        bin_width = bin_width_ms*(2*np.pi)/num_rad_bins
         bin_unit = 'radians'
         title_prefix = 'Phase'
     else:
@@ -995,12 +1041,31 @@ def state_space(
     figs = [fig]
     return MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs
 
-def MU_space_stepwise(OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list, filter_ephys, sort_method,
-    filter_all_anipose, bin_width_ms, bin_width_radian, smoothing_window,
-    bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm, trial_reject_bounds_sec,
-    origin_offsets, bodyparts_list, session_date, rat_name, treadmill_speed, treadmill_incline,
-    camera_fps, align_to, vid_length, time_frame, do_plot, plot_units, phase_align, plot_template,
-    MU_colors, CH_colors):
+def MU_space_stepwise(
+    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+    ):
+    
+    ### Unpack CFG Inputs
+    # unpack analysis inputs
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
+     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+    # unpack plotting inputs
+    (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
+    # unpack chosen rat inputs
+    (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
+     treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    
+    # format inputs to avoid ambiguities
+    session_date = session_date[0]
+    rat_name = str(chosen_rat).lower()
+    treadmill_speed = str(treadmill_speed[0]).zfill(2)
+    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    
+    # only display plot if rat_loco_analysis() is the caller
+    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
     iPar = 0
     # session_ID_lst = []
@@ -1030,15 +1095,7 @@ def MU_space_stepwise(OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, M
         # plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
 
         MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs = \
-            state_space(OE_dict, KS_dict, anipose_dict,ephys_channel_idxs_list, MU_spike_amplitudes_list,
-                    filter_ephys, sort_method, filter_all_anipose, bin_width_ms, bin_width_radian,
-                    smoothing_window, bodypart_for_alignment,
-                    bodypart_for_reference, bodypart_ref_filter, trial_reject_bounds_mm,
-                    trial_reject_bounds_sec, origin_offsets, bodyparts_list, session_date[iPar],
-                    rat_name[iPar], treadmill_speed[iPar], treadmill_incline[iPar], camera_fps,
-                    align_to, vid_length, time_frame, do_plot=False, plot_units=plot_units,
-                    phase_align=phase_align, plot_template=plot_template, MU_colors=MU_colors,
-                    CH_colors=CH_colors)
+            state_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
 
         # session_ID = \
         # f"{session_date[iPar]}_{rat_name[iPar]}_speed{treadmill_speed[iPar]}_incline{treadmill_incline[iPar]}"
@@ -1114,6 +1171,7 @@ def MU_space_stepwise(OE_dict, KS_dict, anipose_dict, ephys_channel_idxs_list, M
                     line_width=3, opacity=0.7)
 
         if phase_align:
+            bin_width_radian = bin_width_ms*(2*np.pi)/num_rad_bins
             bin_width = np.round(bin_width_radian,decimals=3)
             bin_units = "radians"
         else:

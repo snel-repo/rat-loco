@@ -45,9 +45,6 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         if CFG['plotting']['plot_type'] == "sort":
             from process_spikes import sort
             sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
-        elif CFG['plotting']['plot_type'] == "cluster_steps":
-            from cluster_steps import cluster_steps
-            cluster_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
         elif CFG['plotting']['plot_type'] == "bin_and_count":
             from process_spikes import bin_and_count
             bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
@@ -63,12 +60,15 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         elif CFG['plotting']['plot_type'] == "MU_space_stepwise":
             from process_spikes import MU_space_stepwise
             MU_space_stepwise(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
-        elif CFG['plotting']['plot_type'] == "pandas_eda":
-            from pandas_eda import pandas_eda
-            pandas_eda(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
         elif CFG['plotting']['plot_type'] == "behavioral_space":
             from process_steps import behavioral_space
             behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
+        elif CFG['plotting']['plot_type'] == "cluster_steps":
+            from cluster_steps import cluster_steps
+            cluster_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
+        elif CFG['plotting']['plot_type'] == "pandas_eda":
+            from pandas_eda import pandas_eda
+            pandas_eda(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
         elif CFG['plotting']['plot_type'] == "spike_motion_plot":
             from spike_motion_plot import spike_motion_plot
             spike_motion_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
@@ -279,4 +279,4 @@ if __name__ == "__main__":
 #     "springgreen", "steelblue", "tan", "teal", "thistle", "tomato",
 #     "turquoise", "violet", "wheat", "white", "whitesmoke",
 #     "yellow", "yellowgreen"
-#     ]K
+#     ]

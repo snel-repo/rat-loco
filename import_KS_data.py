@@ -57,11 +57,11 @@ def import_KS_data(chosen_rat, CFG):
         if len(session_IDs_temp)==0:
             continue
         session_IDs_dict[directory] = session_IDs_temp # adds list of session IDs to dict under directory key
-        print(recording_lengths_arr_list)
+        # print(recording_lengths_arr_list)
+        
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
         recording_lengths_arr = np.array(recording_lengths_arr_list)/np.array(num_channels_list)
-        # set_trace()
         if "sorted0" in os.listdir(directory):
             kilosort_files = []
             kilosort_folder = os.path.join(directory,"sorted0")
@@ -93,12 +93,12 @@ def import_KS_data(chosen_rat, CFG):
             spikeClusters_arr = np.concatenate(spikeData['I'])
             spikeTimes_arr = np.concatenate(spikeData['T'])
         clusterIDs = np.unique(spikeClusters_arr)
-        print("spikeTimes_arr[0]: ",spikeTimes_arr[0])
-        print(16 * (spikeTimes_arr[-1] - spikeTimes_arr[0]))
+        # print("spikeTimes_arr[0]: ",spikeTimes_arr[0])
+        # print(16 * (spikeTimes_arr[-1] - spikeTimes_arr[0]))
+        
         # take cumsum to use later for recording file index boundaries
         recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(),0,0).astype(int)
         for session_ID in session_IDs_dict[directory]:
-            print("session_ID: ",session_ID)
             for id in clusterIDs:
                 clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[np.where(spikeClusters_arr==id)]
                 clusterIDs_ephys_spikeTimes[id] = clusterIDs_ephys_spikeTimes_id_all[

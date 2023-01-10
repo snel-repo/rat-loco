@@ -49,13 +49,14 @@ def import_OE_data(chosen_rat, CFG):
                 # create list of session dates for the ones that were extracted
                 iChosenRec += 1 
                 continuous_ephys_data_list.append(session.recordnodes[0].recordings[iRec].continuous)
-                continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='float32')
+                continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='float64')
 
                 for iChannel in range(session.recordnodes[0].recordings[iRec].info['continuous'][0]['num_channels']):
                     # Multiply each recording samples by the measured "bit_volts" value.
                     # This converts from 16-bit number to uV for continuous channels and V for ADC channels
                     continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel] = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]*session.recordnodes[0].recordings[iRec].info['continuous'][0]['channels'][iChannel]['bit_volts']
-    
+                continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='int16')
+                # set_trace()
     ## section plots the SYNC channel and describes stats of intervals            
     # signal = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]
     # fsignal = iir_notch(signal, 30000)
@@ -83,6 +84,7 @@ def import_OE_data(chosen_rat, CFG):
         # remove unnecessary extra list dimension and convert to numpy.ndarray
         continuous_ephys_data_list = np.squeeze(continuous_ephys_data_list).tolist() 
     OE_data_dict = dict(zip(list_of_session_IDs,continuous_ephys_data_list))
+    print("Loaded OpenEphys files: ", OE_data_dict.keys())
     return OE_data_dict
 
 ## section for testing a specific directory without other 

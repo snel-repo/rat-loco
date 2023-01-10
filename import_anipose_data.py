@@ -1,8 +1,9 @@
 import os
 import pandas as pd
+# from pdb import set_trace
 
 def _read_pose_3d_data(path_to_pose_3d_csv):
-    print(f"Reading file(s) into DataFrame: {path_to_pose_3d_csv.name}")
+    print(f"Reading Anipose file(s) into DataFrame: {path_to_pose_3d_csv.name}")
     return path_to_pose_3d_csv.name, pd.read_csv(path_to_pose_3d_csv)
 
 def _filter_csv_files(chosen_rat, CFG, directory_name):
@@ -31,12 +32,12 @@ def import_anipose_data(chosen_rat, CFG):
     list_of_pose_3d_dataframes = [] # stores all dataframes
     directory_list = CFG['data_dirs']['anipose']
     
-    for iDir, directory_path in enumerate(directory_list):
+    for directory_path in directory_list:
         pose_3d_path = os.path.join(directory_path,"pose-3d/")
-        if directory_list[iDir][-1] != os.path.sep:   
-            session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
-        else:
-            session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
+        # if directory_list[iDir][-1] != os.path.sep:   
+        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
+        # else:
+        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
         # session_date = session_folder_name[-6:] # extract the date from folder name
         # date_list.append(session_date)
         file_list = os.listdir(pose_3d_path)

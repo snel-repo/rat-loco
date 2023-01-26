@@ -274,8 +274,8 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
     
     # define variables for trializing data
     # align_shift = 2/3 # default fraction of step
-    pre_align_offset  = int(sliced_step_stats.quantile(0.75) // 8) #int(sliced_step_stats.quantile(0.75) *    align_shift)
-    post_align_offset = int(sliced_step_stats.quantile(0.75) * 7 // 8) #int(sliced_step_stats.quantile(0.75) * (1-align_shift))
+    pre_align_offset  = int(0)#int(sliced_step_stats.quantile(0.75) // 8) #int(sliced_step_stats.quantile(0.75) *    align_shift)
+    post_align_offset = int(sliced_step_stats.quantile(0.75))# * 7 // 8) #int(sliced_step_stats.quantile(0.75) * (1-align_shift))
     if align_to == 'foot strike':
         step_idxs = foot_strike_idxs[step_slice]
     elif align_to == 'foot off':
@@ -446,6 +446,12 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
          post_align_offset,trial_reject_bounds_mm,trial_reject_bounds_sec) = trialize_steps(
              chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
              )
+        ### save trialized data hack
+        # set_trace()
+        # trialized_anipose_df.to_csv('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/trialized_anipose_df.csv')
+        # import scipy.io
+        # scipy.io.savemat('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/variables.mat', dict(trialized_anipose_df=trialized_anipose_df,keep_trial_set=list(keep_trial_set),foot_strike_idxs=foot_strike_idxs,foot_off_idxs=foot_off_idxs))
+        # scipy.io.savemat('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/step_idxs_only.mat', dict(keep_trial_set=list(keep_trial_set),foot_strike_idxs=foot_strike_idxs,foot_off_idxs=foot_off_idxs))
         
         # trialize_steps(
         #     anipose_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,

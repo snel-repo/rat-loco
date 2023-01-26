@@ -4,6 +4,7 @@ from import_KS_data import import_KS_data
 import colorlover as cl
 from collections import deque
 from config import config as CFG
+from pdb import set_trace
 # from pdb import set_trace
 
 ### Chosen Rat ###
@@ -72,7 +73,8 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         elif CFG['plotting']['plot_type'] == "spike_motion_plot":
             from spike_motion_plot import spike_motion_plot
             spike_motion_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG)
-            
+        else:
+            raise ValueError(f"Invalid value `plot_type`: '{CFG['plotting']['plot_type']}' in config/config.toml") 
     return
 
 if __name__ == "__main__":    

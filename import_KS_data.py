@@ -84,15 +84,16 @@ def import_KS_data(chosen_rat, CFG):
             print("If above error statement does not contain 'recording99' please make a folder with same name which contains Kilosort Results folder")
             raise FileNotFoundError()
         if ".npy" in kilosort_files[0]:
-            spikeClusters = np.load(kilosort_files[0])
-            spikeClusters_arr = np.concatenate(spikeClusters)       
-            spikeTimes = np.load(kilosort_files[1])
-            spikeTimes_arr = np.concatenate(spikeTimes)
+            spikeClusters_arr = np.load(kilosort_files[0]).ravel()
+            spikeTimes_arr = np.load(kilosort_files[1]).ravel()
+            # spikeClusters_arr = np.concatenate(spikeClusters)       
+            # spikeTimes_arr = np.concatenate(spikeTimes)
         elif ".mat" in kilosort_files[0]:
             spikeData = scipy.io.loadmat(kilosort_files[0])
             spikeClusters_arr = np.concatenate(spikeData['I'])
             spikeTimes_arr = np.concatenate(spikeData['T'])
         clusterIDs = np.unique(spikeClusters_arr)
+        spikeTimes_arr = np.int32(spikeTimes_arr)
         # print("spikeTimes_arr[0]: ",spikeTimes_arr[0])
         # print(16 * (spikeTimes_arr[-1] - spikeTimes_arr[0]))
         

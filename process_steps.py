@@ -44,7 +44,7 @@ def butter_bandpass_filter(data, cutoffs, fs, order=2):
 
 # function identifies peaks and troughs of anipose data, and
 # optionally applies filtering and offset or reference bodypart subtraction
-def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
+def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
     ### Unpack CFG Inputs
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
@@ -58,16 +58,16 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
      treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
     
     # format inputs to avoid ambiguities
-    session_date = session_date[0]
+    session_date = session_date[iterator]
     rat_name = str(chosen_rat).lower()
-    treadmill_speed = str(treadmill_speed[0]).zfill(2)
-    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    treadmill_speed = str(treadmill_speed[iterator]).zfill(2)
+    treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
 
-    # format inputs to avoid ambiguities
-    rat_name = str(rat_name).lower()
-    treadmill_speed = str(treadmill_speed).zfill(2)
-    treadmill_incline = str(treadmill_incline).zfill(2)
+    # # format inputs to avoid ambiguities
+    # rat_name = str(rat_name).lower()
+    # treadmill_speed = str(treadmill_speed).zfill(2)
+    # treadmill_incline = str(treadmill_incline).zfill(2)
    
     # ensure dict is extracted
     if type(anipose_dict) is dict:
@@ -234,7 +234,7 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
     # print(foot_strike_idxs - foot_off_idxs)
     return processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list
 
-def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
+def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -249,16 +249,16 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
      treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
     
     # format inputs to avoid ambiguities
-    session_date = session_date[0]
+    session_date = session_date[iterator]
     rat_name = str(chosen_rat).lower()
-    treadmill_speed = str(treadmill_speed[0]).zfill(2)
-    treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    treadmill_speed = str(treadmill_speed[iterator]).zfill(2)
+    treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     (processed_anipose_df, foot_strike_idxs, foot_off_idxs,
     sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list
      ) = peak_align_and_filt(
-         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
          )
     
     # get column titles
@@ -394,7 +394,7 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
             kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list,
             pre_align_offset, post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec,)
 
-def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG):
+def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -409,16 +409,15 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
      treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
     
     # format inputs to avoid ambiguities
-    # session_date = session_date[0]
+    # session_date = session_date[iterator]
     # rat_name = str(chosen_rat).lower()
-    # treadmill_speed = str(treadmill_speed[0]).zfill(2)
-    # treadmill_incline = str(treadmill_incline[0]).zfill(2)
+    # treadmill_speed = str(treadmill_speed[iterator]).zfill(2)
+    # treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     # session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
     do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
     
-    iPar = 0
     session_ID_lst = []
     trialized_anipose_dfs_lst = []
     subtitles = []
@@ -444,7 +443,7 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
         (trialized_anipose_df,keep_trial_set,foot_strike_idxs,foot_off_idxs,sliced_step_stats,
          kept_step_stats, step_slice,step_time_slice, ref_bodypart_trace_list,pre_align_offset,
          post_align_offset,trial_reject_bounds_mm,trial_reject_bounds_sec) = trialize_steps(
-             chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG
+             chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
              )
         ### save trialized data hack
         # set_trace()

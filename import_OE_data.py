@@ -15,7 +15,7 @@ from pdb import set_trace
 #     y = filtfilt(b, a, data)
 #     return y
 
-def import_OE_data(chosen_rat, CFG):
+def import_OE_data(chosen_rat, CFG, session_iterator):
     ## Outputs all extracted continuous ephys data packed in a dictionary and the keys are unique session identifiers
     
     # initialize lists and counter variable(s)
@@ -37,13 +37,17 @@ def import_OE_data(chosen_rat, CFG):
             chosen_recording = 0
             for filename in file_list:
                 if filename.endswith(".info"):
-                    if filename.__contains__("incline"+str(CFG['rat'][chosen_rat]['treadmill_incline'][0]).zfill(2)):
-                        if filename.__contains__("speed"+str(CFG['rat'][chosen_rat]['treadmill_speed'][0]).zfill(2)):
-                            if filename.__contains__(CFG['rat'][chosen_rat]['session_date'][0]):
-                                if filename.__contains__(chosen_rat):
-                                    recording_info = filename.split('.')[0]
-                                    list_of_session_IDs.append(recording_info.lower())
-                                    chosen_recording = 1
+                    for iterator in session_iterator:
+                        session_date = CFG['rat'][chosen_rat]['session_date'][iterator]
+                        rat_name = str(chosen_rat).lower()
+                        treadmill_speed = str(CFG['rat'][chosen_rat]['treadmill_speed'][iterator]).zfill(2)
+                        treadmill_incline = str(CFG['rat'][chosen_rat]['treadmill_incline'][iterator]).zfill(2)
+                        session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+                        if filename.__contains__(session_ID):
+                            recording_info = filename.split('.')[0]
+                            list_of_session_IDs.append(recording_info.lower())
+                            chosen_recording = 1
+                            break
             if chosen_recording:
                 # increment to track the number of chosen recordings
                 # create list of session dates for the ones that were extracted

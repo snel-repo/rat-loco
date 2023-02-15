@@ -1,24 +1,29 @@
 import os
 import pandas as pd
-# from pdb import set_trace
+from pdb import set_trace
 
 def _read_pose_3d_data(path_to_pose_3d_csv):
-    print(f"Reading Anipose file(s) into DataFrame: {path_to_pose_3d_csv.name}")
+    # print(f"Reading Anipose file(s) into DataFrame: {path_to_pose_3d_csv.name}")
     return path_to_pose_3d_csv.name, pd.read_csv(path_to_pose_3d_csv)
 
-def _filter_csv_files(chosen_rat, CFG, directory_name):
-    file_list = os.listdir(directory_name)
-    for filename in file_list:
-        if filename.endswith(".csv"):
-            if filename.__contains__("incline"+str(CFG['rat'][chosen_rat]['treadmill_incline'][0]).zfill(2)):
-                if filename.__contains__("speed"+str(CFG['rat'][chosen_rat]['treadmill_speed'][0]).zfill(2)):
-                    if filename.__contains__(CFG['rat'][chosen_rat]['session_date'][0]):
-                        if filename.__contains__(chosen_rat):
-                            with open(os.path.join(directory_name, filename), "r") as csv_file:
-                                yield _read_pose_3d_data(csv_file)
+def _filter_csv_files(chosen_rat, CFG, session_iterator_copy, directory_name):
+    for iSess in session_iterator_copy:
+        # format inputs to avoid ambiguities
+        session_date = CFG['rat'][chosen_rat]['session_date'][iSess]
+        rat_name = str(chosen_rat).lower()
+        treadmill_speed = str(CFG['rat'][chosen_rat]['treadmill_speed'][iSess]).zfill(2)
+        treadmill_incline = str(CFG['rat'][chosen_rat]['treadmill_incline'][iSess]).zfill(2)
+        session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+        file_list = os.listdir(directory_name)
+        for filename in file_list:
+            if filename.endswith(".csv"):
+                if filename.__contains__(session_ID):
+                    with open(os.path.join(directory_name, filename), "r") as csv_file:
+                        yield _read_pose_3d_data(csv_file)
+                    break
 
 
-def import_anipose_data(chosen_rat, CFG):
+def import_anipose_data(chosen_rat, CFG, session_iterator):
     ## Input all desired data paths as a list to extract anipose data from 
     # directory_list = [
     #     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220603',
@@ -31,7 +36,7 @@ def import_anipose_data(chosen_rat, CFG):
     list_of_session_IDs = []        # stores unique session identifiers
     list_of_pose_3d_dataframes = [] # stores all dataframes
     directory_list = CFG['data_dirs']['anipose']
-    
+    session_iterator_copy = session_iterator.copy()
     for directory_path in directory_list:
         pose_3d_path = os.path.join(directory_path,"pose-3d/")
         # if directory_list[iDir][-1] != os.path.sep:   
@@ -43,9 +48,10 @@ def import_anipose_data(chosen_rat, CFG):
         file_list = os.listdir(pose_3d_path)
         csv_file_list = []
         [csv_file_list.append(file_list[iFile]) for iFile in range(len(file_list)) if file_list[iFile].endswith('.csv')]
-        for (session_ID, df) in _filter_csv_files(chosen_rat, CFG, pose_3d_path):
+        for (session_ID, df) in _filter_csv_files(chosen_rat, CFG, session_iterator_copy, pose_3d_path):
             # add date string to filename, apply lowercase, remove '.csv' suffix, then append to list
             list_of_session_IDs.append(session_ID.lower().split('/')[-1].split('.')[0])
             list_of_pose_3d_dataframes.append(df)
     anipose_data_dict = dict(zip(list_of_session_IDs,list_of_pose_3d_dataframes))
+    print("Loaded Anipose files:   ", anipose_data_dict.keys())
     return anipose_data_dict

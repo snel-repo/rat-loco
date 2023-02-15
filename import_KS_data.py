@@ -11,9 +11,10 @@ from open_ephys.analysis import Session
 #     idx = (np.abs(array - value)).argmin()
 #     return array[idx]
 
-def import_KS_data(chosen_rat, CFG): 
+def import_KS_data(chosen_rat, CFG, session_iterator): 
     session_IDs_dict = {} # stores .info Session IDs of each recording in order under directory keys 
     directory_list = CFG['data_dirs']['KS']
+    session_iterator_copy = session_iterator.copy()
     for directory in directory_list:
         recording_lengths_arr_list = []
         num_channels_list = []
@@ -21,6 +22,7 @@ def import_KS_data(chosen_rat, CFG):
         spikeTimes_arr = []
         clusterIDs = []
         session_IDs_temp = []
+        chosen_rec_idxs_list = []
         session = Session(directory) # copy over structure.oebin from recording folder to recording99 folder or errors 
         clusterIDs_ephys_spikeTimes = {}
         cluster_id_ephys_data_dict = {}
@@ -37,27 +39,26 @@ def import_KS_data(chosen_rat, CFG):
             if any(".info" in file for file in temp_dir): # checks if .info file exists
                 session_ID = [i for i in temp_dir if ".info" in i][0]
                 # checks and filters for session_ID to match desired settings
-                if session_ID.__contains__("incline"+str(CFG['rat'][chosen_rat]['treadmill_incline'][0]).zfill(2)):
-                    if session_ID.__contains__("speed"+str(CFG['rat'][chosen_rat]['treadmill_speed'][0]).zfill(2)):
-                        if session_ID.__contains__(CFG['rat'][chosen_rat]['session_date'][0]):
-                            if session_ID.__contains__(chosen_rat):
-                                session_IDs_temp.append(session_ID.split('.')[0])
-                                iChosen = iRec
-                            else:
-                                continue
-                        else:
-                            continue
+                for iterator in session_iterator_copy:
+                    session_date = CFG['rat'][chosen_rat]['session_date'][iterator]
+                    rat_name = str(chosen_rat).lower()
+                    treadmill_speed = str(CFG['rat'][chosen_rat]['treadmill_speed'][iterator]).zfill(2)
+                    treadmill_incline = str(CFG['rat'][chosen_rat]['treadmill_incline'][iterator]).zfill(2)
+                    session_ID_CFG = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+                    if session_ID.__contains__(session_ID_CFG):
+                        session_IDs_temp.append(session_ID.split('.')[0])
+                        chosen_rec_idxs_list.append(iRec)
+                        # remove the index value after a match so you don't waste search loops in the future
+                        session_iterator_copy.remove(iterator)
+                        break
                     else:
                         continue
-                else:
-                    continue
             else:
                 print(session.recordnodes[0].recordings[iRec].directory + "has no .info file")
                 return
         if len(session_IDs_temp)==0:
             continue
         session_IDs_dict[directory] = session_IDs_temp # adds list of session IDs to dict under directory key
-        # print(recording_lengths_arr_list)
         
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
@@ -99,17 +100,17 @@ def import_KS_data(chosen_rat, CFG):
         
         # take cumsum to use later for recording file index boundaries
         recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(),0,0).astype(int)
-        for session_ID in session_IDs_dict[directory]:
+        cluster_id_ephys_data_dict = dict.fromkeys(tuple(*session_IDs_dict.values()))
+        for (session_ID, iChosen) in zip(session_IDs_dict[directory],chosen_rec_idxs_list):
+            clusterIDs_ephys_spikeTimes = clusterIDs_ephys_spikeTimes.copy()
             for id in clusterIDs:
                 clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[np.where(spikeClusters_arr==id)]
                 clusterIDs_ephys_spikeTimes[id] = clusterIDs_ephys_spikeTimes_id_all[
                     # filter time ranges to be within the chosen session, and subtract the lower bound index
-                    np.where(
-                        (clusterIDs_ephys_spikeTimes_id_all>recording_len_cumsum[iChosen]) &
-                        (clusterIDs_ephys_spikeTimes_id_all<recording_len_cumsum[iChosen+1])
-                        )] - recording_len_cumsum[iChosen]
+                    np.where((clusterIDs_ephys_spikeTimes_id_all>recording_len_cumsum[iChosen]) &
+                             (clusterIDs_ephys_spikeTimes_id_all<recording_len_cumsum[iChosen+1]))] - recording_len_cumsum[iChosen]
             cluster_id_ephys_data_dict[session_ID] = clusterIDs_ephys_spikeTimes
-        print("Loaded KiloSort files: ", cluster_id_ephys_data_dict.keys())
+        print("Loaded KiloSort files:  ", cluster_id_ephys_data_dict.keys())
                 
         ## NEED TO USE RECORDING LENGTH ARRAY TO DIVIDE UP CONCATENATED DATA INTO SESSIONS
         ## THEN MAKE DICTIONARY IN FORM OF SESSIONID -> CLUSTERID -> SPIKETIMES ARRAY (WITH RESPECT TO LENGTHS OF EACH RECORDING)

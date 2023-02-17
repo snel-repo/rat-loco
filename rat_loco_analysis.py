@@ -42,11 +42,16 @@ MU_colors= MU_colors[:-1]
 
 def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator):
     # if not running a multi-session analysis, the first element in session_iterator is used
+        
     if 'multi' not in CFG['plotting']['plot_type']:
         # functions for calling all analysis functions. Only chosen "plot_type" is executed
         if CFG['plotting']['plot_type'] == "sort":
             from process_spikes import sort
-            sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            if CFG['analysis']['export_data'] is True:
+                for iRec in range(len(CFG['rat'][chosen_rat]['session_date'])):
+                    sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[iRec])
+            else:
+                sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
         elif CFG['plotting']['plot_type'] == "bin_and_count":
             from process_spikes import bin_and_count
             bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
@@ -78,12 +83,15 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         ### Functions with prefix "multi" are designed to loop and compare across multiple condtions
         # multi_bin performs binning of spikes, plots results for all chosen conditions
         if CFG['plotting']['plot_type'] == "multi_bin":
+            from plotly.offline import iplot
+            from plotly.subplots import make_subplots
+            from process_spikes import bin_and_count
             ### Unpack CFG Inputs
             # unpack analysis inputs
             (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
             bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
             trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-            num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+            num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
             # unpack plotting inputs
             (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
             # unpack chosen rat inputs
@@ -91,7 +99,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
             treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
             
             num_sessions = len(session_date)
-            big_fig = make_subplots(rows=1,cols=num_sessions,shared_xaxes=True,shared_yaxes=True,
+            big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes=True,shared_yaxes=True,
                                     horizontal_spacing=0.1, vertical_spacing=0.1,
                                     subplot_titles=tuple(num_sessions*['tmp_title']))
             for iRec in session_iterator:
@@ -104,15 +112,12 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
                 #     session_date[iRec], rat_name[iRec], treadmill_speed[iRec], treadmill_incline[iRec],
                 #     camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
                 #     do_plot=False, plot_template=plot_template, MU_colors=MU_colors, CH_colors=CH_colors)
-                from plotly.offline import iplot
-                from plotly.subplots import make_subplots
-                from process_spikes import bin_and_count
                 ### Unpack CFG Inputs
                 # unpack analysis inputs
                 (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
                 bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
                 trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-                num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+                num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
                 # unpack plotting inputs
                 (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
                 # unpack chosen rat inputs
@@ -120,26 +125,26 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
                 treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
                 
                 num_sessions = len(session_date)
-                for iHist in range(len(figs[0].data)):
-                    big_fig.add_trace(figs[0].data[iHist], row=iRec+1,
-                        col=(iHist//len(MU_spike_amplitudes_list))+1)
+                if sort_method == 'kilosort':
+                    for iHist in range(len(figs[0].data)):
+                        big_fig.add_trace(figs[0].data[iHist], row=iRec+1,col=(iHist//len(plot_units))+1)
+                elif sort_method == 'thresholding':
+                    for iHist in range(len(figs[0].data)):
+                        big_fig.add_trace(figs[0].data[iHist], row=iRec+1,col=(iHist//len(MU_spike_amplitudes_list))+1)
                 # keep track of session recording parameters, and set those for subplot titles
-                big_fig.layout.annotations[2*iRec].update(text=figs[0].layout.annotations[0].text)
-                big_fig.layout.annotations[2*iRec+1].update(text=figs[0].layout.annotations[1].text)
-                # set y-axis titles to those received from bin_spikes()
-                big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,
-                                        row = iRec+1, col = 1)
-                big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,
-                                        row = iRec+1, col = 2)
-            # set x-axis titles to those received from bin_spikes()
-            big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text,row = iRec+1, col = 1)
-            big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text,row = iRec+1, col = 2)
+                big_fig.layout.annotations[iRec].update(text=figs[0].layout.annotations[0].text)
+                big_fig.layout.annotations[iRec].update(text=figs[0].layout.annotations[1].text)
+                # set y-axis titles to those received from bin_and_count()
+                big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,row=iRec+1,col=1)
+                big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,row=iRec+1,col=2)
+            # set x-axis titles to those received from bin_and_count()
+            big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text,row=iRec+1,col=1)
+            big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text,row=iRec+1,col=2)
             big_fig.update_yaxes(matches='y')
             # Reduce opacity to see both histograms
             big_fig.update_traces(opacity=0.75)
-            # set bars to overlap and all titles, and use received title from bin_spikes()
+            # set bars to overlap and all titles, and use received title from bin_and_count()
             big_fig.update_layout(barmode='overlay',title_text=figs[0].layout.title.text)
-            
             iplot(big_fig)
         # multi_count performs counting of total number of spikes, plots results for all chosen conditions
         # elif CFG['plotting']['plot_type'] == "multi_count":
@@ -151,7 +156,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
         #     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
         #     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-        #     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+        #     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
         #     # unpack plotting inputs
         #     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
         #     # unpack chosen rat inputs
@@ -181,9 +186,9 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #             big_fig.add_trace(figs[1].data[iHist], row=1, col=iRec+1)
         #         # extract each session's recording parameters, and set subplot titles
         #         big_fig.layout.annotations[iRec].update(text=figs[1].layout.title.text)
-        #         # set y-axis titles to those received from bin_spikes()
+        #         # set y-axis titles to those received from bin_and_count()
         #         big_fig.update_yaxes(title_text=figs[1].layout.yaxis.title.text, row = 1, col = iRec+1)
-        #         # set x-axis titles to those received from bin_spikes()
+        #         # set x-axis titles to those received from bin_and_count()
         #         big_fig.update_xaxes(title_text=figs[1].layout.xaxis.title.text,row = 1, col = iRec+1)
         #     # lock y-axes together
         #     big_fig.update_yaxes(matches='y')
@@ -212,18 +217,18 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #         # keep track of session recording parameters, and set those for subplot titles
         #         big_fig.layout.annotations[iSmooth].update(text=figs[0].layout.title.text.split('<br>')[1])
         #         # big_fig.layout.annotations[2*iSmooth+1].update(text=figs[0].layout.annotations[1].text)
-        #         # set y-axis titles to those received from bin_spikes()
+        #         # set y-axis titles to those received from bin_and_count()
         #         big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,
         #                                 row = iSmooth+1, col = 1)
         #         # big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,
         #         #                         row = iSmooth+1, col = 2)
-        #     # set x-axis titles to those received from bin_spikes()
+        #     # set x-axis titles to those received from bin_and_count()
         #     big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text,row = num_smooth_windows, col = 1)
         #     # big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text,row = iSmooth+1, col = 2)
         #     big_fig.update_xaxes(matches='x')
         #     # Reduce opacity to see all traces
         #     # big_fig.update_traces(opacity=0.75)
-        #     # set all titles using received title from bin_spikes()
+        #     # set all titles using received title from bin_and_count()
         #     big_fig.update_layout(title_text=figs[0].layout.title.text.split('<br>')[0])
 
         #     iplot(big_fig)
@@ -257,12 +262,12 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #         # keep track of session recording parameters, and set those for subplot titles
         #         big_fig.layout.annotations[iRec].update(text=figs[0].layout.title.text.split('<br>')[1])
         #         # big_fig.layout.annotations[2*iRec+1].update(text=figs[0].layout.annotations[1].text)
-        #         # set y-axis titles to those received from bin_spikes()
+        #         # set y-axis titles to those received from bin_and_count()
         #         big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,
         #                                 row = iRec+1, col = 1)
         #         # big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,
         #         #                         row = iRec+1, col = 2)
-        #         # set x-axis titles to those received from bin_spikes()
+        #         # set x-axis titles to those received from bin_and_count()
         #         big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text,row = iRec+1, col = 1)
         #         # big_fig.update_xaxes(matches='y',row = iRec+1, col = 1)
         #         # big_fig.update_yaxes(matches='x',row = iRec+1, col = 1)
@@ -271,7 +276,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #     # big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text,row = iRec+1, col = 2)
         #     # Reduce opacity to see all traces
         #     # big_fig.update_traces(opacity=0.75)
-        #     # set all titles using received title from bin_spikes()
+        #     # set all titles using received title from bin_and_count()
         #     big_fig.update_layout(title_text=figs[0].layout.title.text.split('<br>')[0])
             
             # iplot(big_fig)

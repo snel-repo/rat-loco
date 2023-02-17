@@ -50,7 +50,7 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -165,7 +165,7 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
         threshold=None,
         distance=30,
         prominence=None,
-        width=None,
+        width=10,
         wlen=None
         )
 
@@ -175,7 +175,7 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
         threshold=None,
         distance=30,
         prominence=None,
-        width=None,
+        width=10,
         wlen=None
         )
 
@@ -241,7 +241,7 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -401,7 +401,7 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -416,7 +416,7 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
     # session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
+    do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
     
     session_ID_lst = []
     trialized_anipose_dfs_lst = []

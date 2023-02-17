@@ -49,7 +49,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -64,11 +64,11 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    if CFG['plotting']['do_plot']==2:
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-    else:
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
-    
+
     # extract data from dictionaries
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
     chosen_anipose_df = anipose_dict[session_ID]
@@ -100,7 +100,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     
     # filter step peaks/troughs to be within chosen time_frame, but
     # only when time_frame=1 is not indicating to use the full dataset
-    if CFG['analysis']['time_frame']!=1:
+    if time_frame!=1:
         foot_strike_slice_idxs = foot_strike_idxs[np.where(
             (foot_strike_idxs >= step_time_slice.start) &
             (foot_strike_idxs <= step_time_slice.stop))]
@@ -127,16 +127,16 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
             
     # set conversion ratio from camera to electrophysiology sample rate
     step_to_ephys_conversion_ratio = ephys_sample_rate/camera_fps
-    step_idx_ephys_time = []
-    step_idx_ephys_time.append(
+    step_slice_bounds_in_ephys_time = []
+    step_slice_bounds_in_ephys_time.append(
         int(step_to_ephys_conversion_ratio*(step_time_slice.start))+start_video_capture_ephys_idx)
-    step_idx_ephys_time.append(
+    step_slice_bounds_in_ephys_time.append(
         int(step_to_ephys_conversion_ratio*(step_time_slice.stop))+start_video_capture_ephys_idx)
     if time_frame == 1:
-        step_time_slice_ephys = slice(0,-1) # get full anipose traces, if time_frame==1
+        slice_for_ephys_during_video = slice(0,-1) # get full anipose traces, if time_frame==1
     else:
         # step_slice = slice(step_time_slice.start,step_time_slice.stop)
-        step_time_slice_ephys = slice(step_idx_ephys_time[0],step_idx_ephys_time[1])
+        slice_for_ephys_during_video = slice(step_slice_bounds_in_ephys_time[0],step_slice_bounds_in_ephys_time[1])
     
     # cluster the spikes waveforms with PCA
     # pca = PCA(n_components=3)
@@ -152,7 +152,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
             MU_spike_idxs = [] # initialize empty list for each channel to hold next sorted spike idxs
             for iAmplitudes in MU_spike_amplitudes_list:
                 if channel_number not in [-1,16]:
-                    ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[step_time_slice_ephys, channel_number]
+                    ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[slice_for_ephys_during_video, channel_number]
                     if filter_ephys == 'notch' or filter_ephys == 'both':
                         ephys_data_for_channel = iir_notch(
                             ephys_data_for_channel, ephys_sample_rate)
@@ -179,8 +179,8 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
             print('No additional filters applied to voltage signals.')
     elif sort_method == 'kilosort':
         chosen_KS_dict = KS_dict[session_ID]
-        MU_spikes_dict = {k:v for (k,v) in chosen_KS_dict.items() if k in CFG['plotting']['plot_units']}
-        assert len(MU_spikes_dict)==len(CFG['plotting']['plot_units']), "Selected MU key could be missing from input KS dictionary."
+        MU_spikes_dict = {k:v for (k,v) in chosen_KS_dict.items() if k in plot_units}
+        assert len(MU_spikes_dict)==len(plot_units), "Selected MU key could be missing from input KS dictionary."
         # set_trace()
     
     # MU_spike_idxs = np.array(MU_spike_idxs,dtype=object).squeeze().tolist()
@@ -308,15 +308,15 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     # plot all ephys traces and/or SYNC channel
     row_spacing = 0
     for iChannel, channel_number in enumerate(ephys_channel_idxs_list):
-        row_spacing = np.clip(0.9*np.max(chosen_ephys_data_continuous_obj.samples[step_time_slice_ephys,channel_number]),2000,5000) + row_spacing
+        row_spacing = np.clip(0.9*np.max(chosen_ephys_data_continuous_obj.samples[slice_for_ephys_during_video,channel_number]),2000,5000) + row_spacing
         fig.add_trace(go.Scatter(
-            x=time_axis_for_ephys[step_time_slice_ephys],
+            x=time_axis_for_ephys[slice_for_ephys_during_video],
             # if statement provides different scalings and offsets for ephys vs. SYNC channel
             y=np.round((chosen_ephys_data_continuous_obj.samples[
-                step_time_slice_ephys,channel_number] - row_spacing
+                slice_for_ephys_during_video,channel_number] - row_spacing
                 if channel_number not in [-1,16]
                 else (chosen_ephys_data_continuous_obj.samples[
-                    step_time_slice_ephys,channel_number]+4)*0.5e3
+                    slice_for_ephys_during_video,channel_number]+4)*0.5e3
                 )),
             name=f"CH{channel_number}" if channel_number not in [-1,16] else "SYNC",
             mode='lines',
@@ -327,25 +327,23 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
             )
         if sort_method == 'kilosort':
             # UnitKeys = MU_spikes_dict.keys()
-            UnitKeys = CFG['plotting']['plot_units']
+            UnitKeys = plot_units
         elif sort_method == 'thresholding':
             UnitKeys = MU_spikes_dict[str(channel_number)].keys()
+        sliced_MU_spikes_dict = MU_spikes_dict.copy()
         for iUnit, iUnitKey in enumerate(UnitKeys):
             if channel_number not in [-1,16]:
                 if sort_method == 'thresholding':
-                    MU_spikes_dict_for_unit = MU_spikes_dict[str(channel_number)][iUnitKey][:]+step_time_slice_ephys.start
+                    MU_spikes_dict_for_unit = MU_spikes_dict[str(channel_number)][iUnitKey][:]+slice_for_ephys_during_video.start
+                    sliced_MU_spikes_dict[str(channel_number)][iUnitKey] = MU_spikes_dict_for_unit.copy()
                 elif sort_method == 'kilosort':
-                    MU_spikes_dict_for_unit = MU_spikes_dict[iUnitKey][:] if CFG['analysis']['time_frame']==1 \
+                    MU_spikes_dict_for_unit = MU_spikes_dict[iUnitKey][:] if time_frame==1 \
                         else MU_spikes_dict[iUnitKey][:][np.where(
-                            (MU_spikes_dict[iUnitKey][:] > step_time_slice_ephys.start) &
-                            (MU_spikes_dict[iUnitKey][:] < step_time_slice_ephys.stop)
+                            (MU_spikes_dict[iUnitKey][:] > slice_for_ephys_during_video.start) &
+                            (MU_spikes_dict[iUnitKey][:] < slice_for_ephys_during_video.stop)
                         )]
-                row2 = len(bodyparts_list)+len(ephys_channel_idxs_list)+1
-                # spike_idx_in_time_frame = np.where((MU_spikes_dict[str(channel_number)][iUnitKey]
-                #                            >= step_idx_ephys_time[0]-start_video_capture_ephys_idx) &
-                #                           (MU_spikes_dict[str(channel_number)][iUnitKey]
-                #                            <= step_idx_ephys_time[1]-start_video_capture_ephys_idx))
-                
+                    sliced_MU_spikes_dict[iUnitKey] = MU_spikes_dict_for_unit.copy()-slice_for_ephys_during_video.start
+                row2 = len(bodyparts_list)+len(ephys_channel_idxs_list)+1                
                 # plot spike locations onto each selected ephys trace
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
@@ -364,7 +362,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                     fig.add_trace(go.Scatter(
                         x=time_axis_for_ephys[ # index where spikes are, starting after the video
                             MU_spikes_dict_for_unit],
-                        y=np.zeros(len(time_axis_for_ephys[step_time_slice_ephys])).astype(np.int16)-unit_counter,
+                        y=np.zeros(len(time_axis_for_ephys[slice_for_ephys_during_video])).astype(np.int16)-unit_counter,
                         name=f"CH{channel_number}, Unit {iUnitKey}" if sort_method == 'thresholding' else f"KS Cluster: {iUnitKey}",
                         mode='markers',
                         marker_symbol='line-ns',
@@ -402,13 +400,33 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     figs = [fig]
 
     if do_plot:
-            iplot(fig)
-    # else:
-        # figs = []
-    # set_trace()
+        iplot(fig)
+    if export_data:
+        from scipy.io import savemat, loadmat
+        # time_axis_for_ephys=time_axis_for_ephys[slice_for_ephys_during_video],
+        # MU_spikes_by_KS_cluster = {str(k): np.array(v,dtype=int) for k, v in sliced_MU_spikes_dict.items()},
+        # time_axis_for_anipose=time_axis_for_anipose,
+        # foot_off_idxs = np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs],1),
+        # foot_strike_idxs = np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],1),
+        # anipose_data = {k: np.array(v,dtype=float) for k, v in chosen_anipose_df.to_dict('list').items()},
+        # session_ID = session_ID
+        # set_trace()
+        export_dict = dict(time_axis_for_ephys=time_axis_for_ephys[slice_for_ephys_during_video],
+                           ephys_data = chosen_ephys_data_continuous_obj.samples[slice_for_ephys_during_video],
+                           MU_spikes_by_KS_cluster = {'unit'+str(k).zfill(2): np.array(v+1,dtype=np.int64) for k, v in sliced_MU_spikes_dict.items()},
+                           time_axis_for_anipose=time_axis_for_anipose,
+                           foot_off_idxs = foot_off_idxs+1,
+                           foot_strike_idxs = foot_strike_idxs+1,
+                           foot_off_times = time_axis_for_anipose[foot_off_slice_idxs],
+                           foot_strike_times = time_axis_for_anipose[foot_strike_slice_idxs],
+                           anipose_data = {k: np.array(v,dtype=float) for k, v in chosen_anipose_df.to_dict('list').items()},
+                           session_ID = session_ID)
+        savemat(f'{session_ID}.mat', export_dict, oned_as='column')
+        # x = loadmat(f'{session_ID}.mat')
+        # set_trace()
     return (
         MU_spikes_dict, time_axis_for_ephys, chosen_anipose_df, time_axis_for_anipose,
-        ephys_sample_rate, start_video_capture_ephys_idx, step_time_slice_ephys, session_ID, figs
+        ephys_sample_rate, start_video_capture_ephys_idx, slice_for_ephys_during_video, session_ID, figs
     )
 
 def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
@@ -417,7 +435,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -432,11 +450,11 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    if CFG['plotting']['do_plot']==2:
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-    else:
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
-    
+
     # check inputs for problems
     if 16 in ephys_channel_idxs_list:
         ephys_channel_idxs_list.remove(16)
@@ -445,7 +463,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         "ephys_channel_idxs_list should only be 1 channel, idiot! :)"
     assert type(bin_width_ms) is int, "bin_width_ms must be type 'int'."
     
-    (MU_spikes_dict, _, chosen_anipose_df, _, ephys_sample_rate, _, step_time_slice_ephys, session_ID,_) = sort(
+    (MU_spikes_dict, _, chosen_anipose_df, _, ephys_sample_rate, _, slice_for_ephys_during_video, session_ID,_) = sort(
         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator)
 
     # (_, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
@@ -464,7 +482,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     # set_trace()
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
     if sort_method == 'thresholding':
-        MU_spikes_dict = MU_spikes_dict[str(ephys_channel_idxs_list[0])]#+step_time_slice_ephys.start
+        MU_spikes_dict = MU_spikes_dict[str(ephys_channel_idxs_list[0])]#+slice_for_ephys_during_video.start
         print("!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!")
         print("!! Using FIRST channel in ephys_channel_idxs_list !!")
         print("!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!")
@@ -504,9 +522,9 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         elif sort_method == 'kilosort':
             MU_spikes_idx_arr = MU_spikes_dict[iUnitKey][
                                 np.where(
-                                    (MU_spikes_dict[iUnitKey][:] > step_time_slice_ephys.start) &
-                                    (MU_spikes_dict[iUnitKey][:] < step_time_slice_ephys.stop))
-                                ]-step_time_slice_ephys.start+step_idxs_in_ephys_time[0]
+                                    (MU_spikes_dict[iUnitKey][:] > slice_for_ephys_during_video.start) &
+                                    (MU_spikes_dict[iUnitKey][:] < slice_for_ephys_during_video.stop))
+                                ]-slice_for_ephys_during_video.start+step_idxs_in_ephys_time[0]
         for ii, iStep in enumerate(keep_trial_set):#range(number_of_steps): # for each step
             iStep -= step_slice.start
             # skip all spike counting and list appending if not in `keep_trial_set`
@@ -630,8 +648,8 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         f"Session Info: {session_ID}",
         f"Session Info: {session_ID}"
         ))
-    if CFG['analysis']['sort_method']=='kilosort':
-        MU_iter = CFG['plotting']['plot_units']
+    if sort_method=='kilosort':
+        MU_iter = plot_units
     else:
         MU_iter = MU_spikes_dict.keys()
         
@@ -645,7 +663,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         fig1.add_trace(go.Histogram(
             x=MU_step_aligned_idxs_ms, # ms
             xbins=dict(start=0, size=bin_width_ms),
-            name=str(iUnitKey)+"uV crossings" if CFG['analysis']['sort_method']=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit]),
             row=1, col=1
             )
@@ -660,7 +678,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         fig1.add_trace(go.Histogram(
             x=MU_step_2π_aligned_idxs, # radians
             xbins=dict(start=0, size=bin_width_radian),
-            name=str(iUnitKey)+"uV crossings" if CFG['analysis']['sort_method']=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit],
             showlegend=False),
             row=1, col=2
@@ -699,7 +717,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     fig2.add_trace(go.Bar(
     # list comprehension to get threshold values for each isolated unit on this channel
     x=[str(iUnitKey)+"uV crossings" for iUnitKey in np.fromiter(MU_spikes_dict.keys(),'int')[order_by_count[::-1]]] \
-        if CFG['analysis']['sort_method']=='thresholding' \
+        if sort_method=='thresholding' \
         else ["KS Cluster: "+str(iUnitKey) for iUnitKey in  np.fromiter(MU_spikes_dict.keys(),'int')[order_by_count[::-1]]],
     y=MU_spikes_count_across_all_steps[order_by_count[::-1]],
     marker_color=[MU_colors[iColor] for iColor in range(0,len(MU_colors),color_stride)],
@@ -725,6 +743,9 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     if do_plot:
         iplot(fig1)
         iplot(fig2)
+    if export_data:
+        from scipy.io import savemat
+        pass
 
     if save_binned_MU_data is not False:
         np.save(session_ID+"_time.npy",MU_spikes_3d_array_binned, allow_pickle=False)
@@ -760,7 +781,7 @@ def raster(
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -774,10 +795,10 @@ def raster(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    if CFG['plotting']['do_plot']==2:
+    if do_plot==2:
         do_plot = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
     
     number_of_steps = MU_spikes_3d_array_ephys_time.shape[0]
     samples_per_step = MU_spikes_3d_array_ephys_time.shape[1]
@@ -830,6 +851,9 @@ def raster(
         
     if do_plot:
         iplot(fig)
+    if export_data:
+        from scipy.io import savemat
+        pass
     
     figs = [fig]
     return figs
@@ -856,7 +880,7 @@ def smooth(
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -871,11 +895,11 @@ def smooth(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    if CFG['plotting']['do_plot']==2:
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-    else:
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
-    
+
     # initialize 3d numpy array with shape: Steps x Bins x Units
     if phase_align is True:
         binned_spike_array = MU_spikes_3d_array_binned_2π
@@ -940,6 +964,9 @@ def smooth(
     
     if do_plot:
         iplot(fig)
+    if export_data:
+        from scipy.io import savemat
+        pass
   
     # put in a list for compatibility with calling functions
     figs = [fig]
@@ -970,7 +997,7 @@ def state_space(
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -985,11 +1012,11 @@ def state_space(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    if CFG['plotting']['do_plot']==2:
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-    else:
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
-    
+
     # select units for plotting
     sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
     
@@ -1084,6 +1111,9 @@ def state_space(
     
     if do_plot:
         iplot(fig)
+    if export_data:
+        from scipy.io import savemat
+        pass
     # put in a list for compatibility with calling functions
     figs = [fig]
     return MU_smoothed_spikes_3d_array, binned_spike_array, steps_to_keep_arr, figs
@@ -1097,7 +1127,7 @@ def MU_space_stepwise(
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
-     num_rad_bins,smoothing_window,phase_align,align_to) = CFG['analysis'].values()
+     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
     # unpack chosen rat inputs
@@ -1112,11 +1142,11 @@ def MU_space_stepwise(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    if CFG['plotting']['do_plot']==2:
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-    else:
-        do_plot = True if stack()[1].function == 'rat_loco_analysis' else False
-    
+
     iPar = 0
     # session_ID_lst = []
     # trialized_anipose_dfs_lst = []

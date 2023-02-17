@@ -86,11 +86,11 @@ num_rad_bins = 89
 smoothing_window = [10,10,10,10,10] # bins
 phase_align = false # set Boolean, pertains to process_spikes.smooth() and process_spikes.state_space()
 align_to = 'foot off' # "foot strike"/"foot off"
-export_data = true
+export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "sort" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
+plot_type = "multi_bin" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
 plot_units =  [4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
 do_plot = 0 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
 N_colors = 10 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)

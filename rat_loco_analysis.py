@@ -99,9 +99,9 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
             treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
             
             num_sessions = len(session_date)
-            big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes=True,shared_yaxes=True,
+            big_fig = make_subplots(rows=num_sessions,cols=2,shared_xaxes=True,shared_yaxes=False,
                                     horizontal_spacing=0.1, vertical_spacing=0.1,
-                                    subplot_titles=tuple(num_sessions*['tmp_title']))
+                                    subplot_titles=tuple(2*num_sessions*['tmp_title']))
             for iRec in session_iterator:
                 # format inputs to avoid ambiguities
                 (_,_,_,_,_,_,_,_,_,_,_,figs) = bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iRec)
@@ -132,8 +132,8 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
                     for iHist in range(len(figs[0].data)):
                         big_fig.add_trace(figs[0].data[iHist], row=iRec+1,col=(iHist//len(MU_spike_amplitudes_list))+1)
                 # keep track of session recording parameters, and set those for subplot titles
-                big_fig.layout.annotations[iRec].update(text=figs[0].layout.annotations[0].text)
-                big_fig.layout.annotations[iRec].update(text=figs[0].layout.annotations[1].text)
+                big_fig.layout.annotations[2*iRec].update(text=figs[0].layout.annotations[0].text)
+                big_fig.layout.annotations[2*iRec+1].update(text=figs[0].layout.annotations[1].text)
                 # set y-axis titles to those received from bin_and_count()
                 big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text,row=iRec+1,col=1)
                 big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text,row=iRec+1,col=2)
@@ -145,6 +145,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
             big_fig.update_traces(opacity=0.75)
             # set bars to overlap and all titles, and use received title from bin_and_count()
             big_fig.update_layout(barmode='overlay',title_text=figs[0].layout.title.text)
+            # set_trace()
             iplot(big_fig)
         # multi_count performs counting of total number of spikes, plots results for all chosen conditions
         # elif CFG['plotting']['plot_type'] == "multi_count":

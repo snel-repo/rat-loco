@@ -134,9 +134,11 @@ conda activate dlc
 # ^^ default conda env ^^
 
 ### aliases and functions (user added) ###
-alias sshpoisson="ssh -Yt snel@192.168.1.206 'cd /home/snel/git/FLIR_Multi_Cam_HWTrig ; bash'"
-alias rec="cd ~/git/FLIR_Multi_Cam_HWTrig && python FLIR_Multicam.py 1"
+alias sshpoisson="ssh -Y snel@192.168.1.206"
+alias rec="cd ~/git/rat-loco/FLIR-Multicam && python FLIR_Multicam.py 1"
 alias coolero="nohup /home/snel/coolero/Coolero-x86_64.AppImage"
+alias cdoe='cd /snel/share/data/rodent-ephys/open-ephys/treadmill/'
+alias cdani="cd /snel/share/data/anipose/"
 
 function getframes(){
 	python ~/git/rat-loco/getframes.py "$@"
@@ -176,15 +178,11 @@ function makeanipose(){
 	mkdir $new_anipose_dir/videos-raw
 	cp $prev_anipose_dir/calibration/* $new_anipose_dir/calibration/
 	cp $prev_anipose_dir/config.toml $new_anipose_dir/config.toml
-	for dir in ~/git/FLIR_Multi_Cam_HWTrig/images`date +'%Y%m%d'`*/
+	for dir in ~/git/rat-loco/FLIR-Multicam/images`date +'%Y%m%d'`*/
 	do
 #		dir=${dir%*/}
 		cp $dir*.mp4 $new_anipose_dir/videos-raw/
 	done
-}
-
-function sync_FLIR_Multicam_2poisson(){
-	rsync -a --rsh=ssh /home/snel/git/FLIR_Multi_Cam_HWTrig/FLIR_Multicam.py snel@192.168.1.206:/home/snel/git/FLIR_Multi_Cam_HWTrig/
 }
 
 export PATH="/home/snel/.local/bin:$PATH"

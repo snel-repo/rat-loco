@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import allframes2vid
+from pdb import set_trace
 
 def allsessionframes2vid(num_frames, date=time.localtime(), downsampling_factor=1, destination='.', framerate=125, num_cams=4):
      if date==time.localtime():
@@ -9,13 +10,13 @@ def allsessionframes2vid(num_frames, date=time.localtime(), downsampling_factor=
           base_folder_name = 'images'+date
      else:
           base_folder_name = 'images'+date
-     all_dirs = os.listdir("/home/snel/git/FLIR_Multi_Cam_HWTrig/")
+     all_dirs = os.listdir(os.path.expanduser("~/git/rat-loco/FLIR-Multicam"))
      date_match_dir_list= []
      for d in all_dirs:
           if base_folder_name in d:
                date_match_dir_list.append(d)
      for iDir in date_match_dir_list:
-          os.chdir(f"/home/snel/git/FLIR_Multi_Cam_HWTrig/{iDir}/")
+          os.chdir(os.path.expanduser(f"~/git/rat-loco/FLIR-Multicam/{iDir}/"))
           # get all unique base filenames, and write that to a file
           allframes2vid.allframes2vid(num_frames, downsampling_factor, destination, framerate, num_cams)
 

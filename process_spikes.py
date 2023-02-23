@@ -1016,9 +1016,11 @@ def state_space(
         do_plot = False
     if do_plot==2: # override above, always plot if do_plot==2
         do_plot = True
-
     # select units for plotting
-    sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
+    if sort_method == 'kilosort':
+        sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array # [:,:,plot_units]
+    else:
+        sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array[:,:,plot_units]
     
     # set numbers of things from input matrix dimensionality
     # number_of_steps = sliced_MU_smoothed_3d_array.shape[0]
@@ -1052,7 +1054,7 @@ def state_space(
                 opacity=.5,
                 line=dict(width=5,color=MU_colors[int(treadmill_incline)//5],dash='solid')
                 ))
-        elif number_of_units==3:
+        elif number_of_units>=3:
             fig.add_trace(go.Scatter3d(
                 x=sliced_MU_smoothed_3d_array[iStep,:,0],
                 y=sliced_MU_smoothed_3d_array[iStep,:,1],
@@ -1073,7 +1075,7 @@ def state_space(
                 line=dict(width=10,color=CH_colors[0],dash='solid'),
                 marker=dict(size=8,color=CH_colors[0])
                 ))
-    elif number_of_units==3:
+    elif number_of_units>=3:
             fig.add_trace(go.Scatter3d(
                 x=sliced_MU_smoothed_3d_array[:,:,0].mean(0),
                 y=sliced_MU_smoothed_3d_array[:,:,1].mean(0),
@@ -1092,16 +1094,16 @@ def state_space(
             xaxis_title_text=f'<b>Unit {plot_units[0]} Activity</b>',
             yaxis_title_text=f'<b>Unit {plot_units[1]} Activity</b>'
             )
-    elif number_of_units==3:
+    elif number_of_units>=3:
         fig.update_layout(
             title_text=
             f'<b>{title_prefix}-Aligned MU State Space Activity for Channel {ephys_channel_idxs_list[0]} Across Inclines</b>\
             <br><b>{session_ID}</b>')#, Bin Width: {np.round(bin_width,3)}{bin_unit}, Smoothed by {smoothing_window} bins</sup>')
         fig.update_scenes(
-            dict(camera=dict(eye=dict(x=-0.3, y=-2, z=0.2)), #the default values are 1.25, 1.25, 1.25
-                xaxis = dict(title_text=f'<b>Unit {plot_units[0]} Activity</b>'),
-                yaxis = dict(title_text=f'<b>Unit {plot_units[1]} Activity</b>'),
-                zaxis = dict(title_text=f'<b>Unit {plot_units[2]} Activity</b>'),
+            dict(camera=dict(eye=dict(x=-2, y=-0.3, z=0.2)), #the default values are 1.25, 1.25, 1.25
+                xaxis = dict(title_text=f'<b>Unit {plot_units[0]} Activity</b>', range=[0,1.0]),
+                yaxis = dict(title_text=f'<b>Unit {plot_units[1]} Activity</b>', range=[0,1.0]),
+                zaxis = dict(title_text=f'<b>Unit {plot_units[2]} Activity</b>', range=[0,1.0]),
                 aspectmode='manual', #this string can be 'data', 'cube', 'auto', 'manual'
                 # custom aspectratio is defined as follows:
                 aspectratio=dict(x=1, y=1, z=1)

@@ -11,23 +11,27 @@
 
 ***FOR CAMERA***
 1. Open `~/git/FLIR_Multi_Cam_HWTrig/params.yaml` on Visual Studio Code
-2. ***num_images***: the number of frames to capture
+2. ***num_images***: the number of frames to capture (125fps * seconds of reacording)
    ***file_name***: use format yyyymmdd_ratname_speedXX_inclineYY (e.g., 20221118_godzilla_speed15_incline00)
-3. Open 2 terminals
-   -In one, type `sshpoisson` to access Poisson, which controls 2 of the BlackFly S cameras
-   -In both, executre `rec` to put all 4 cameras into a "Trigger Wait" state
+3. Execute `rec` to put all 4 cameras into a "Trigger Wait" state
 4. Plug in the orange cable to #2 on the arduino to start camera recording
 5. Unplug the orange cable when recording is finished 
 
 ***GET CONVERTING FRAMES TO VIDEO***
-1. Close the Poisson terminal
-2. Execute `getframes` on Axon to get all images from Poisson for all sessions from today or `getframes <yyyymmdd>` for all sessions from another date.
-3. Go to `~/git/FLIR_Multi_Cam_HWTrig/`, then use `allsessionframes2vid <number of frames>` to loop through all session folders from today and convert all frames to videos. For all sessions from a different date, run `allsessionframes2vid <number of frames> <yyyymmdd>`.
-4. (Optional) To combine and visualize all videos, navigate to one of the `images<yyyymmdd-X>` folders, and use `stackallvids`. Add argument: `xstack`, `hstack`, or `vstack` to stack them horizontally, vertically, or in a square (e.g. default is `stackallvids hstack`)
+1. Go to `~/git/FLIR_Multi_Cam_HWTrig/`, then use `allsessionframes2vid <number of frames>` to loop through all session folders from today and convert all frames to videos. For all sessions from a different date, run `allsessionframes2vid <number of frames> <yyyymmdd>`.
+2. (Optional) To combine and visualize all videos, navigate to one of the `images<yyyymmdd-X>` folders, and use `stackallvids`. Add argument: `xstack`, `hstack`, or `vstack` to stack them horizontally, vertically, or in a square (e.g. default is `stackallvids hstack`)
 
 ***ANIPOSE***
 1. Run `makeanipose` to automatically create a new session folder in `~/anipose/session<yyyymmdd>` and move all videos from today into the `videos-raw` folder
-2. Check https://anipose.readthedocs.io/en/latest/tutorial.html for details on Anipose usage
+2. Here is a list of commands used in Anipose (run ALL commands in order to triangulate)
+      `anipose analyze` : creates pose-2d folder
+      `anipose filter` (apply over the 2D data functions as a threshold filter): creates pose-2d-filtered folder
+      `anipose label-2d-filter` (plot the filtered predicted 2D labels on each frame): creates videos-labeled-filtered folder.
+      `anipose label-2d` (view the unfiltered predicted 2D labels on each frame): creates videos-labeled folder
+      `anipose calibrate`
+      `anipose triangulate` (generate csv file for each group of videos): creates pose-3d folder
+      `anipose label-3d` (plot the predicted labels from the 3D tracking for each group of videos): creates videos-3d folder
+      `anipose label-combined` (concatenate the videos for each group of videos obtained from running label-2d and label-3d): creates videos-combined folder
 
 
 ***USEFUL COMMANDS***

@@ -1,22 +1,21 @@
 import pandas as pd
-from pandas_profiling import ProfileReport
 from process_steps import peak_align_and_filt
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as colormap
 from matplotlib.colors import ListedColormap
 from plotly.offline import iplot
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.signal import find_peaks, butter, filtfilt, iirnotch, coherence
-from scipy.ndimage import gaussian_filter1d
-from pdb import set_trace
 import colorlover as cl
+# from pandas_profiling import ProfileReport
+# import matplotlib.pyplot as plt
+# import matplotlib.cm as colormap
+# import plotly.graph_objects as go
+# from plotly.subplots import make_subplots
+# from scipy.signal import find_peaks, butter, filtfilt, iirnotch, coherence
+# from scipy.ndimage import gaussian_filter1d
+# from pdb import set_trace
 
 def pandas_eda(
-        ephys_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
+        ephys_data_dict, KS_data_dict, ephys_channel_idxs_list, MU_spike_amplitudes_list,
         filter_ephys, filter_all_anipose, bin_width_ms, bin_width_radian, anipose_data_dict,
         bodypart_for_alignment, bodypart_for_reference,
         bodypart_ref_filter, origin_offsets,
@@ -129,38 +128,38 @@ def pandas_eda(
     ## plotly plotting
     # create colormap
     data_color_assignment_percentiles = np.linspace(0, 1, len(MU_colors))
-    colorscale = [[i,j] for i,j in zip(data_color_assignment_percentiles,reversed(MU_colors))]
+    colorscale = [[i,j] for i,j in zip(data_color_assignment_percentiles,MU_colors)]
     
     # create pairplot scatter matrices for each spatial coordinate dimension for all bodyparts
-    grr_X = px.scatter_matrix(
-        anipose_df_all_inclines.loc[:,X_data_labels].iloc[:,:9],
-        color=Labels, color_continuous_scale=colorscale, 
-        opacity=.5, width=900, height=900)
+    # grr_X = px.scatter_matrix(
+    #     anipose_df_all_inclines.loc[:,X_data_labels].iloc[:,:8],
+    #     color=Labels, color_continuous_scale=colorscale, 
+    #     opacity=.25, width=800, height=800)
     grr_Y = px.scatter_matrix(
-        anipose_df_all_inclines.loc[:,Y_data_labels].iloc[:,:9],
+        anipose_df_all_inclines.loc[:,Y_data_labels].iloc[:,:8],
         color=Labels, color_continuous_scale=colorscale, 
-        opacity=.5, width=900, height=900)
-    grr_Z = px.scatter_matrix(
-        anipose_df_all_inclines.loc[:,Z_data_labels].iloc[:,:9],
-        color=Labels, color_continuous_scale=colorscale, 
-        opacity=.5, width=900, height=900)
+        opacity=.2, width=900, height=900)
+    # grr_Z = px.scatter_matrix(
+    #     anipose_df_all_inclines.loc[:,Z_data_labels].iloc[:,:8],
+    #     color=Labels, color_continuous_scale=colorscale, 
+    #     opacity=.25, width=800, height=800)
     
-    grr_X.update_traces(marker=dict(size=2))
-    grr_Y.update_traces(marker=dict(size=2))
-    grr_Z.update_traces(marker=dict(size=2))
+    # grr_X.update_traces(marker=dict(size=3))
+    grr_Y.update_traces(marker=dict(size=3))
+    # grr_Z.update_traces(marker=dict(size=3))
     
-    grr_X.update_layout(
-        title_text="<b>Pairwise Movement for X-Dim, Bodyparts During Locomotion</b>",
-        coloraxis_colorbar_title_text = '<b>Incline</b>'
-    )
+    # grr_X.update_layout(
+    #     title_text="<b>Pairwise Movement for X-Dim, Bodyparts During Locomotion</b>",
+    #     coloraxis_colorbar_title_text = '<b>Incline</b>'
+    # )
     grr_Y.update_layout(
         title_text="<b>Pairwise Movement for Y-Dim, Bodyparts During Locomotion</b>",
         coloraxis_colorbar_title_text = '<b>Incline</b>'
     )
-    grr_Z.update_layout(
-        title_text="<b>Pairwise Movement for Z-Dim, Bodyparts During Locomotion</b>",
-        coloraxis_colorbar_title_text = '<b>Incline</b>'
-    )
+    # grr_Z.update_layout(
+    #     title_text="<b>Pairwise Movement for Z-Dim, Bodyparts During Locomotion</b>",
+    #     coloraxis_colorbar_title_text = '<b>Incline</b>'
+    # )
     
     # pre_onset = 40
     # post_onset = 20
@@ -187,9 +186,9 @@ def pandas_eda(
     # plot_avg_data(trimmed_anipose_dfs_lst, align_idxs_lst, pre_onset, post_onset, "palm_L_y")
     # plt.show()
     # set_trace()
-    iplot(grr_X)
+    # iplot(grr_X)
     iplot(grr_Y)
-    iplot(grr_Z)
+    # iplot(grr_Z)
     # design_report = ProfileReport(sorted_body_anipose_df)
     # design_report.to_file(output_file=f"{session_parameters_lst[iPar]}_report_sorted_aligned.html")
     return

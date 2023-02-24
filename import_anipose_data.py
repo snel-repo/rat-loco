@@ -1,21 +1,29 @@
 import os
-import os.path
 import pandas as pd
 from pdb import set_trace
 
 def _read_pose_3d_data(path_to_pose_3d_csv):
-    print(f"Reading file(s) into DataFrame: {path_to_pose_3d_csv.name}")
-    return pd.read_csv(path_to_pose_3d_csv)
+    # print(f"Reading Anipose file(s) into DataFrame: {path_to_pose_3d_csv.name}")
+    return path_to_pose_3d_csv.name, pd.read_csv(path_to_pose_3d_csv)
 
-def _read_all_csv_files(directory_name):
-    file_list = os.listdir(directory_name)
-    for file_name in file_list:
-        if file_name.endswith(".csv"):
-            with open(os.path.join(directory_name, file_name), "r") as csv_file:
-                yield _read_pose_3d_data(csv_file)
+def _filter_csv_files(chosen_rat, CFG, session_iterator_copy, directory_name):
+    for iSess in session_iterator_copy:
+        # format inputs to avoid ambiguities
+        session_date = CFG['rat'][chosen_rat]['session_date'][iSess]
+        rat_name = str(chosen_rat).lower()
+        treadmill_speed = str(CFG['rat'][chosen_rat]['treadmill_speed'][iSess]).zfill(2)
+        treadmill_incline = str(CFG['rat'][chosen_rat]['treadmill_incline'][iSess]).zfill(2)
+        session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+        file_list = os.listdir(directory_name)
+        for filename in file_list:
+            if filename.endswith(".csv"):
+                if filename.__contains__(session_ID):
+                    with open(os.path.join(directory_name, filename), "r") as csv_file:
+                        yield _read_pose_3d_data(csv_file)
+                    break
 
 
-def import_anipose_data(directory_list):
+def import_anipose_data(chosen_rat, CFG, session_iterator):
     ## Input all desired data paths as a list to extract anipose data from 
     # directory_list = [
     #     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220603',
@@ -24,24 +32,26 @@ def import_anipose_data(directory_list):
     ## Outputs all extracted dataframes, with unique file identifiers as dictionary keys
 
     # initialize lists
-    date_list = []                  # stores dates of each session
+    # date_list = []                  # stores dates of each session
     list_of_session_IDs = []        # stores unique session identifiers
     list_of_pose_3d_dataframes = [] # stores all dataframes
-
-    for iDir, directory_path in enumerate(directory_list):
-        if directory_list[iDir][-1] != os.path.sep:   
-            session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
-        else:
-            session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
-        session_date = session_folder_name[-6:] # extract the date from folder name
-        date_list.append(session_date)
-        file_list = os.listdir(directory_path)
+    directory_list = CFG['data_dirs']['anipose']
+    session_iterator_copy = session_iterator.copy()
+    for directory_path in directory_list:
+        pose_3d_path = os.path.join(directory_path,"pose-3d/")
+        # if directory_list[iDir][-1] != os.path.sep:   
+        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
+        # else:
+        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
+        # session_date = session_folder_name[-6:] # extract the date from folder name
+        # date_list.append(session_date)
+        file_list = os.listdir(pose_3d_path)
         csv_file_list = []
         [csv_file_list.append(file_list[iFile]) for iFile in range(len(file_list)) if file_list[iFile].endswith('.csv')]
-        for iFile, df in enumerate(_read_all_csv_files(directory_path)):
+        for (session_ID, df) in _filter_csv_files(chosen_rat, CFG, session_iterator_copy, pose_3d_path):
             # add date string to filename, apply lowercase, remove '.csv' suffix, then append to list
-            list_of_session_IDs.append(csv_file_list[iFile].lower().split('.')[0])
+            list_of_session_IDs.append(session_ID.lower().split('/')[-1].split('.')[0])
             list_of_pose_3d_dataframes.append(df)
     anipose_data_dict = dict(zip(list_of_session_IDs,list_of_pose_3d_dataframes))
-
+    print("Loaded Anipose files:   ", anipose_data_dict.keys())
     return anipose_data_dict

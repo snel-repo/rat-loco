@@ -1,0 +1,3 @@
+[submodule "FLIR-Multicam"]
+	path = FLIR-Multicam
+	url = git@github.com:smarkoco/FLIR-Multicam.git

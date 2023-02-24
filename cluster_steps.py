@@ -1,13 +1,10 @@
 from process_steps import peak_align_and_filt
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from plotly.offline import iplot
 import plotly.graph_objects as go
-from pdb import set_trace
 from sklearn.decomposition import PCA
 from sklearn.manifold import Isomap
-from sklearn.preprocessing import StandardScaler, RobustScaler
 import umap
 import umap.plot
 

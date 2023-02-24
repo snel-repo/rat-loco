@@ -1,5 +1,5 @@
 # `rat-loco`
-*Functions for rat locomotion data processing and analysis*
+*Functions for rat locomotion data acquisition, processing and analysis*
 
 ## To set up an environment:
 1. Clone the repo:

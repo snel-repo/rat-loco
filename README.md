@@ -6,13 +6,22 @@
     - `git clone git@github.com:snel-repo/rat-loco.git`
 
 2. Create a `conda` environment
-    - `conda create -n ratloco python==3.10`
+    - `conda create -n ratloco python==3.8`
 
 3. Activate the new environment
     - `conda activate ratloco`
 
 4. Install required packages with `pip`
     - `pip install -r requirements.txt`
+
+5. If you plan to acquire frames with a FLIR USB 3 camera, be sure to download and install the Python version of Spinnaker:
+    - https://flir.app.boxcn.net/v/SpinnakerSDK/folder/136168103146
+    - Ensure the correct version is installed for your operating system.
+    - Once downloaded, unzip and install with:
+        - `cd ~/Downloads`
+        - `tar -xzf spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64.tar.gz # <-- Warning: get the latest correct version for your OS`
+        - `cd spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64`
+        - `pip install spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64.whl`
     
 
 ## To run analyses:

@@ -130,7 +130,7 @@ else
 fi
 unset __conda_setup
 # <<< conda initialize <<<
-conda activate dlc
+conda activate ratloco
 # ^^ default conda env ^^
 
 ### aliases and functions (user added) ###

@@ -135,7 +135,8 @@ conda activate dlc
 
 ### aliases and functions (user added) ###
 alias sshpoisson="ssh -Y snel@192.168.1.206"
-alias rec="cd ~/git/rat-loco/FLIR-Multicam && python FLIR_Multicam.py 1"
+#alias rec="cd ~/git/rat-loco/FLIR-Multicam && python FLIR_Multicam.py 1"
+alias rec="cd ~/git/rat-loco/FLIR-Multicam && sudo nice -n -20 su -c '~/miniconda3/envs/ratloco/bin/python FLIR_Multicam.py 1' $USER"
 alias coolero="nohup /home/snel/coolero/Coolero-x86_64.AppImage"
 alias cdoe='cd /snel/share/data/rodent-ephys/open-ephys/treadmill/'
 alias cdani="cd /snel/share/data/anipose/"

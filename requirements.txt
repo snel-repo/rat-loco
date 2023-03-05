@@ -79,6 +79,7 @@ PyWavelets
 PyYAML
 pyzmq
 requests
+ruamel.yaml
 scikit-image
 scikit-learn
 scipy
@@ -91,6 +92,7 @@ statsmodels
 tangled-up-in-unicode
 tblib
 tenacity
+termplotlib
 threadpoolctl
 tifffile
 tomli

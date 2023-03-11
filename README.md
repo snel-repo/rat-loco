@@ -19,9 +19,9 @@
     - Ensure the correct version is installed for your operating system.
     - Once downloaded, unzip and install with:
         - `cd ~/Downloads`
-        - `tar -xzf spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64.tar.gz # <-- Warning: get the latest correct version for your OS`
-        - `cd spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64`
-        - `pip install spinnaker_python-2.6.0.157-cp38-cp38-linux_x86_64.whl`
+        - `tar -xzf spinnaker_python-3.0.0.118-cp38-cp38-linux_x86_64.tar.gz # <-- Warning: get the latest correct version for your OS`
+        - `cd spinnaker_python-3.0.0.118-cp38-cp38-linux_x86_64`
+        - `pip install spinnaker_python-3.0.0.118-cp38-cp38-linux_x86_64.whl`
     
 
 ## To run analyses:

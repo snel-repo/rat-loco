@@ -4,11 +4,11 @@ from import_KS_data import import_KS_data
 import colorlover as cl
 from collections import deque
 from config import config as CFG
-from pdb import set_trace
-# from pdb import set_trace
 
 ### Chosen Rat ###
 chosen_rat = 'godzilla' # <-- Choose Rat HERE
+chosen_session = 0 # <-- Choose Session HERE. # From session_date list, provide an index. 
+                                              # This only applies to single-session analyses
 
 ### Process Chosen Plotting Parameters
 # black to grey
@@ -24,21 +24,6 @@ MU_colors = list(MU_colors_deque)
 MU_colors.reverse()
 MU_colors= MU_colors[:-1]
 # MU_colors = ['royalblue','green','darkorange','firebrick']
-
-# # function filters data dictionaries for desired data
-# def filter_data_dict(data_dict, session_date, rat_name, treadmill_speed, treadmill_incline):
-#     data_dict_filtered_by_date = dict(filter(lambda item:
-#                                 str(session_date) in item[0], data_dict.items()))
-#     data_dict_filtered_by_ratname = dict(filter(lambda item:
-#                                 rat_name in item[0], data_dict_filtered_by_date.items()))
-#     data_dict_filtered_by_speed = dict(filter(lambda item:
-#                                 "speed"+str(treadmill_speed).zfill(2) in item[0],
-#                                 data_dict_filtered_by_ratname.items()))
-#     data_dict_filtered_by_incline = dict(filter(lambda item:
-#                                 "incline"+str(treadmill_incline).zfill(2) in item[0],
-#                                 data_dict_filtered_by_speed.items()))
-#     chosen_data_dict = data_dict_filtered_by_incline
-#     return chosen_data_dict
 
 def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator):
     # if not running a multi-session analysis, the first element in session_iterator is used
@@ -145,7 +130,6 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
             big_fig.update_traces(opacity=0.75)
             # set bars to overlap and all titles, and use received title from bin_and_count()
             big_fig.update_layout(barmode='overlay',title_text=figs[0].layout.title.text)
-            # set_trace()
             iplot(big_fig)
         # multi_count performs counting of total number of spikes, plots results for all chosen conditions
         # elif CFG['plotting']['plot_type'] == "multi_count":
@@ -257,7 +241,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
         #             treadmill_speed[iRec], treadmill_incline[iRec], camera_fps, align_to, vid_length, time_frame, save_binned_MU_data,
         #             do_plot=False, plot_units=plot_units, phase_align=phase_align, plot_template=plot_template,
         #             MU_colors=MU_colors, CH_colors=CH_colors)
-        #         # set_trace()
+
         #         for iPlot in range(len(figs[0].data)):
         #             big_fig.add_trace(figs[0].data[iPlot], row=iRec+1,col=1)
         #         # keep track of session recording parameters, and set those for subplot titles

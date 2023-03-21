@@ -13,9 +13,9 @@ from open_ephys.analysis import Session
 
 def import_KS_data(chosen_rat, CFG, session_iterator): 
     session_IDs_dict = {} # stores .info Session IDs of each recording in order under directory keys 
-    directory_list = CFG['data_dirs']['KS']
+    data_dir_list = CFG['data_dirs']['KS']
     session_iterator_copy = session_iterator.copy()
-    for directory in directory_list:
+    for data_dir in data_dir_list:
         recording_lengths_arr_list = []
         num_channels_list = []
         spikeClusters_arr = []
@@ -23,7 +23,7 @@ def import_KS_data(chosen_rat, CFG, session_iterator):
         clusterIDs = []
         session_IDs_temp = []
         chosen_rec_idxs_list = []
-        session = Session(directory) # copy over structure.oebin from recording folder to recording99 folder or errors 
+        session = Session(data_dir) # copy over structure.oebin from recording folder to recording99 folder or errors 
         clusterIDs_ephys_spikeTimes = {}
         cluster_id_ephys_data_dict = {}
         for iRec in range((len(session.recordnodes[0].recordings))): # loops through all individual recording folders
@@ -58,30 +58,40 @@ def import_KS_data(chosen_rat, CFG, session_iterator):
                 return
         if len(session_IDs_temp)==0:
             continue
-        session_IDs_dict[directory] = session_IDs_temp # adds list of session IDs to dict under directory key
+        session_IDs_dict[data_dir] = session_IDs_temp # adds list of session IDs to dict under directory key
         
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
         recording_lengths_arr = np.array(recording_lengths_arr_list)/np.array(num_channels_list)
-        if "sorted0" in os.listdir(directory):
+        concatenated_data_dir = os.path.abspath(os.path.join(session.recordnodes[0].recordings[-1].directory, os.pardir,'concatenated_data'))
+        if not os.path.exists(concatenated_data_dir):
+            concatenated_data_dir = session.recordnodes[0].recordings[-1].directory # folder which contains all session data combined
+        print(f"Using {concatenated_data_dir} folder.")
+        if "sorted0" in os.listdir(data_dir):
             kilosort_files = []
-            kilosort_folder = os.path.join(directory,"sorted0")
-            for root, dirs, files in os.walk(kilosort_folder):
-                if "custom_merge.mat" in files:
-                    kilosort_files.append(os.path.join(root, "custom_merge.mat"))
-        elif "KilosortResults" in os.listdir(session.recordnodes[0].recordings[-1].directory):
+            kilosort_folder = os.path.join(data_dir,"sorted0")
+            if "custom_merges" in os.listdir(kilosort_folder):
+                # grab final merge output
+                kilosort_files.append(os.path.join(kilosort_folder, "custom_merges/final_merge/custom_merge.mat"))
+            else:
+                # grab raw KS output
+                kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
+                kilosort_files.append(os.path.join(root, "spike_times.npy"))
+                if len(kilosort_files) != 2:
+                    print("KiloSort Spike Times and/or Spike Clusters not found!")
+                    return
+        elif "KilosortResults" in os.listdir(concatenated_data_dir):
             kilosort_files = []
-            kilosort_folder = session.recordnodes[0].recordings[-1].directory + "/KilosortResults"
+            kilosort_folder = concatenated_data_dir + "/KilosortResults"
             for root, dirs, files in os.walk(kilosort_folder):
                 if "spike_clusters.npy" in files and "spike_times.npy" in files:
                     kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
                     kilosort_files.append(os.path.join(root, "spike_times.npy"))
-                
-                if len(kilosort_files) != 2:
-                    print("KiloSort Spike Times and/or Spike Clusters not found!")
-                    return
+                    if len(kilosort_files) != 2:
+                        print("KiloSort Spike Times and/or Spike Clusters not found!")
+                        return
         else:
-            print("No folder named 'KilosortResults' in " + session.recordnodes[0].recordings[-1].directory + " or sorted0 folder with custom_merge.mat")
+            print("No folder named 'KilosortResults' in " + concatenated_data_dir + " or sorted0 folder with custom_merge.mat")
             print("If above error statement does not contain 'recording99' please make a folder with same name which contains Kilosort Results folder")
             raise FileNotFoundError()
         if ".npy" in kilosort_files[0]:
@@ -101,7 +111,7 @@ def import_KS_data(chosen_rat, CFG, session_iterator):
         # take cumsum to use later for recording file index boundaries
         recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(),0,0).astype(int)
         cluster_id_ephys_data_dict = dict.fromkeys(tuple(*session_IDs_dict.values()))
-        for (session_ID, iChosen) in zip(session_IDs_dict[directory],chosen_rec_idxs_list):
+        for (session_ID, iChosen) in zip(session_IDs_dict[data_dir],chosen_rec_idxs_list):
             clusterIDs_ephys_spikeTimes = clusterIDs_ephys_spikeTimes.copy()
             for id in clusterIDs:
                 clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[np.where(spikeClusters_arr==id)]
@@ -116,6 +126,6 @@ def import_KS_data(chosen_rat, CFG, session_iterator):
         ## THEN MAKE DICTIONARY IN FORM OF SESSIONID -> CLUSTERID -> SPIKETIMES ARRAY (WITH RESPECT TO LENGTHS OF EACH RECORDING)
     return cluster_id_ephys_data_dict
 
-# directory_list = ['/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/2022-11-16_16-19-28_myo']# ['/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-18_18-38-54']#, '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07']
-# tempdict = define_index_dict(directory_list)
+# data_dir_list = ['/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/2022-11-16_16-19-28_myo']# ['/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-18_18-38-54']#, '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07']
+# tempdict = define_index_dict(data_dir_list)
 # print("done.")

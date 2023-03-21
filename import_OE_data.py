@@ -59,7 +59,7 @@ def import_OE_data(chosen_rat, CFG, session_iterator):
                     # Multiply each recording samples by the measured "bit_volts" value.
                     # This converts from 16-bit number to uV for continuous channels and V for ADC channels
                     continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel] = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]*session.recordnodes[0].recordings[iRec].info['continuous'][0]['channels'][iChannel]['bit_volts']
-                continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='float')
+                continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='float32')
                 # set_trace()
     ## section plots the SYNC channel and describes stats of intervals            
     # signal = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]

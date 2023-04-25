@@ -25,7 +25,7 @@ MU_colors.reverse()
 MU_colors= MU_colors[:-1]
 # MU_colors = ['royalblue','green','darkorange','firebrick']
 
-def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator):
+def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator, chosen_session):
     # if not running a multi-session analysis, the first element in session_iterator is used
         
     if 'multi' not in CFG['plotting']['plot_type']:
@@ -36,38 +36,42 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
                 for iRec in range(len(CFG['rat'][chosen_rat]['session_date'])):
                     sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[iRec])
             else:
-                sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+                sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "bin_and_count":
             from process_spikes import bin_and_count
-            bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "raster":
             from process_spikes import raster
-            raster(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            raster(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "smooth":
             from process_spikes import smooth
-            smooth(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            smooth(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "state_space":
             from process_spikes import state_space
-            state_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            state_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "MU_space_stepwise":
             from process_spikes import MU_space_stepwise
-            MU_space_stepwise(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            MU_space_stepwise(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "behavioral_space":
             from process_steps import behavioral_space
-            behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "cluster_steps":
             from cluster_steps import cluster_steps
-            cluster_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            cluster_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "pandas_eda":
             from pandas_eda import pandas_eda
-            pandas_eda(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])
+            pandas_eda(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])
         elif CFG['plotting']['plot_type'] == "spike_motion_plot":
             from spike_motion_plot import spike_motion_plot
-            spike_motion_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[0])           
+            spike_motion_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[chosen_session])           
     else:
         ### Functions with prefix "multi" are designed to loop and compare across multiple condtions
         # multi_bin performs binning of spikes, plots results for all chosen conditions
-        if CFG['plotting']['plot_type'] == "multi_bin":
+        if CFG['plotting']['plot_type'] == "multi_sort":
+            from process_spikes import sort
+            for iRec in range(len(CFG['rat'][chosen_rat]['session_date'])):
+                sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator[iRec])
+        elif CFG['plotting']['plot_type'] == "multi_bin":
             from plotly.offline import iplot
             from plotly.subplots import make_subplots
             from process_spikes import bin_and_count
@@ -276,7 +280,7 @@ if __name__ == "__main__":
     anipose_dict = import_anipose_data(chosen_rat, CFG, session_iterator)
     if CFG['analysis']['sort_method'] =='kilosort':
         KS_dict = import_KS_data(chosen_rat, CFG, session_iterator)
-    rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator)
+    rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator, chosen_session)
     
 
 

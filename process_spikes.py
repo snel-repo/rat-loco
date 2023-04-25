@@ -65,11 +65,11 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # extract data from dictionaries
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
@@ -455,11 +455,11 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # check inputs for problems
     if 16 in ephys_channel_idxs_list:
@@ -797,7 +797,7 @@ def raster(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    if do_plot==2:
+    if do_plot==2: # override and ensure all plots are displayed when do_plot==2
         do_plot = True
     else: # only display plot if rat_loco_analysis() is the caller
         do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
@@ -895,11 +895,11 @@ def smooth(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # initialize 3d numpy array with shape: Steps x Bins x Units
     if phase_align is True:
@@ -1012,11 +1012,11 @@ def state_space(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
     # select units for plotting
     if sort_method == 'kilosort':
         sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array # [:,:,plot_units]
@@ -1144,11 +1144,11 @@ def MU_space_stepwise(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     iPar = 0
     # session_ID_lst = []

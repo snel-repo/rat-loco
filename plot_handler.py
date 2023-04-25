@@ -247,7 +247,7 @@ def sort_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, MU_spikes_dict, CH_col
 
 def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_method, do_plot,
                        MU_colors, CFG, MU_step_aligned_spike_idxs_dict,
-                       MU_step_2π_warped_spike_idxs_dict, MU_spikes_count_across_all_steps):
+                       MU_step_2π_warped_spike_idxs_dict, MU_spikes_count_across_all_sessions):
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -257,8 +257,7 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
         num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
-    
-    order_by_count = np.argsort(MU_spikes_count_across_all_steps)
+    order_by_count = np.argsort(MU_spikes_count_across_all_sessions)
     color_stride = 1
     fig1 = make_subplots(
         rows=1, cols=2,
@@ -272,25 +271,27 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
     else:
         MU_iter = MU_spikes_dict_keys
         
-    # for iUnit, iUnitKey in enumerate(np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]):
-    for iUnit, iUnitKey in enumerate(np.fromiter(MU_iter,'int')[order_by_count[::-1]]):
+    for iUnit, iUnitKey in enumerate(np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]):
         try:
-            MU_step_aligned_idxs = np.concatenate(MU_step_aligned_spike_idxs_dict[str(iUnitKey)]).ravel()            
+            MU_step_aligned_idxs = np.concatenate(
+                MU_step_aligned_spike_idxs_dict[str(iUnitKey)]).ravel()            
         except KeyError:
-            MU_step_aligned_idxs = np.concatenate(MU_step_aligned_spike_idxs_dict[iUnitKey]).ravel()
+            MU_step_aligned_idxs = np.concatenate(
+                MU_step_aligned_spike_idxs_dict[iUnitKey]).ravel()
         except:
             raise
         MU_step_aligned_idxs_ms = MU_step_aligned_idxs/ephys_sample_rate*1000
         fig1.add_trace(go.Histogram(
             x=MU_step_aligned_idxs_ms, # ms
             xbins=dict(start=0, size=bin_width_ms),
-            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if (
+                sort_method=='thresholding') else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit]),
             row=1, col=1
             )
-    # for iUnit, iUnitKey in enumerate(np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]):
+    
     bin_width_radian = 2*np.pi/num_rad_bins
-    for iUnit, iUnitKey in enumerate(np.fromiter(MU_iter,'int')[order_by_count[::-1]]):
+    for iUnit, iUnitKey in enumerate(np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]):
         try:
             MU_step_2π_aligned_idxs = np.concatenate(
                 MU_step_2π_warped_spike_idxs_dict[str(iUnitKey)]).ravel()
@@ -300,7 +301,8 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
         fig1.add_trace(go.Histogram(
             x=MU_step_2π_aligned_idxs, # radians
             xbins=dict(start=0, size=bin_width_radian),
-            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if (
+                sort_method=='thresholding') else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit],
             showlegend=False),
             row=1, col=2
@@ -312,8 +314,7 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
     # set bars to overlap and all titles
     fig1.update_layout(
         barmode='overlay',
-        title_text=\
-            '<b>Time and Phase-Aligned Motor Unit Activity During Step Cycle</b>',
+        title_text='<b>Time and Phase-Aligned Motor Unit Activity During Step Cycle</b>',
         # xaxis_title_text='<b>Time During Step (milliseconds)</b>',
         # yaxis_title_text=,
         # bargap=0., # gap between bars of adjacent location coordinates
@@ -345,10 +346,12 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
     
     fig2.add_trace(go.Bar(
     # list comprehension to get threshold values for each isolated unit on this channel
-    x=[str(iUnitKey)+"uV crossings" for iUnitKey in np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]] \
+    x=[str(iUnitKey)+"uV crossings" for iUnitKey in
+       np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]] \
         if sort_method=='thresholding' \
-        else ["KS Cluster: "+str(iUnitKey) for iUnitKey in  np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]],
-    y=MU_spikes_count_across_all_steps[order_by_count[::-1]],
+        else ["KS Cluster: "+str(iUnitKey) for iUnitKey in
+              np.fromiter(MU_spikes_dict_keys,'int')[order_by_count[::-1]]],
+    y=MU_spikes_count_across_all_sessions[order_by_count[::-1]],
     marker_color=[MU_colors[iColor] for iColor in range(0,len(MU_colors),color_stride)],
     opacity=1,
     showlegend=False
@@ -356,9 +359,8 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
     ))
     # set all titles
     fig2.update_layout(
-        title_text=
-        f'<b>Total Motor Unit Spikes Across {number_of_steps} Steps</b>\
-        <br><sup>Session Info: {session_ID}</sup>',
+        title_text= (f'<b>Total Motor Unit Spikes Across {number_of_steps} Steps</b>'
+                     f'<br><sup>Session Info: {session_ID}</sup>'),
         # xaxis_title_text='<b>Motor Unit Voltage Thresholds</b>',
         yaxis_title_text='<b>Spike Count</b>',
         # bargap=0., # gap between bars of adjacent location coordinates

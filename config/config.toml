@@ -82,8 +82,8 @@ export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "multijoin_bin_and_count" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
-plot_units =  [11,8,3]#,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
+plot_type = "bin_and_count" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
+plot_units =  [1,14]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
 do_plot = 1 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
 N_colors = 10 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
 plot_template = 'plotly_white'

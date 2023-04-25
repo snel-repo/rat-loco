@@ -1,19 +1,13 @@
-from process_steps import peak_align_and_filt, trialize_steps
 import numpy as np
-from plotly.offline import iplot
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.signal import find_peaks, butter, filtfilt, iirnotch
-from scipy.ndimage import gaussian_filter1d
-from inspect import stack
 
-# this module will house functions that combine data from multiple sessions after processing them
+# this module houses functions that combine data from multiple sessions after processing them
 # with the functions in process_spikes.py and process_steps.py. The goal is to have a single
 # numpy array for all sessions provided in session_date in the config file
 
-# this function will loop through process_spikes.bin_and_count() for each session provided
-# and accumulate the results into a single numpy array along the step dimension.
-# The 3D array will then be plotted with bin_and_count_plot in plot_handler.py
+# this function loops through process_spikes.bin_and_count() for each session provided
+# and accumulates the results into a single numpy array along the step dimension.
+# The 3D array is then plotted with bin_and_count_plot in plot_handler.py
 def multijoin_bin_and_count(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
     ):
@@ -53,12 +47,14 @@ def multijoin_bin_and_count(
         MU_spikes_dict_keys = list(MU_spikes_dict.keys())
         
         if iRec == session_iterator[0]:
-                MU_spikes_count_across_all_steps = MU_spikes_3d_array_binned.sum(0).sum(0)
+                joined_session_ID = session_ID
+                MU_spikes_count_across_all_sessions = MU_spikes_3d_array_binned.sum(0).sum(0)
                 joined_MU_step_aligned_spike_idxs_dict = MU_step_aligned_spike_idxs_dict.copy()
                 joined_MU_step_2π_warped_spike_idxs_dict = MU_step_2π_warped_spike_idxs_dict.copy()
                 # joined_MU_spikes_3d_array_binned_2π = MU_spikes_3d_array_binned_2π.copy()
         else:
-            MU_spikes_count_across_all_steps = (MU_spikes_count_across_all_steps +
+            joined_session_ID = f"{session_ID.split('_')[0]}+{joined_session_ID}"
+            MU_spikes_count_across_all_sessions = (MU_spikes_count_across_all_sessions.copy() +
                                                 MU_spikes_3d_array_binned.sum(0).sum(0))
             for key in MU_step_aligned_spike_idxs_dict.keys():
                 joined_MU_step_aligned_spike_idxs_dict[key] = (
@@ -69,13 +65,10 @@ def multijoin_bin_and_count(
                     joined_MU_step_2π_warped_spike_idxs_dict[key] +
                     MU_step_2π_warped_spike_idxs_dict[key]
                     )
-            # joined_MU_spikes_3d_array_binned_2π = np.concatenate(
-            #     (joined_MU_spikes_3d_array_binned_2π, MU_spikes_3d_array_binned_2π),axis=0)
-            
     bin_and_count_plot(
-        MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_method,
+        MU_spikes_dict_keys, ephys_sample_rate, joined_session_ID, sort_method,
         do_plot, MU_colors, CFG, joined_MU_step_aligned_spike_idxs_dict,
-        joined_MU_step_2π_warped_spike_idxs_dict, MU_spikes_count_across_all_steps
+        joined_MU_step_2π_warped_spike_idxs_dict, MU_spikes_count_across_all_sessions
         )
     
     return

@@ -5,7 +5,7 @@ from config import config as CFG
 
 ### Chosen Rat ###
 chosen_rat = 'godzilla' # <-- Choose Rat HERE
-chosen_session = 0 # <-- Choose Session HERE. # From session_date list, provide an index. 
+chosen_session = 1 # <-- Choose Session HERE. # From session_date list, provide an index. 
                                               # This only applies to single-session analyses
 
 ### Process Chosen Plotting Parameters

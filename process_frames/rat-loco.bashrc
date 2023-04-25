@@ -143,31 +143,31 @@ alias cdoe='cd /snel/share/data/rodent-ephys/open-ephys/treadmill/'
 alias cdani="cd /snel/share/data/anipose/"
 
 function getframes(){
-    python ~/git/rat-loco/getframes.py "$@"
+    python ~/git/rat-loco/process_frames/getframes.py "$@"
 }
 
 function getvids(){
-    python ~/git/rat-loco/getvids.py "$@"
+    python ~/git/rat-loco/process_frames/getvids.py "$@"
 }
 
 function frames2vid(){
-    python ~/git/rat-loco/frames2vid.py "$@"
+    python ~/git/rat-loco/process_frames/frames2vid.py "$@"
 }
 
 function allframes2vid(){
-    python ~/git/rat-loco/allframes2vid.py "$@"
+    python ~/git/rat-loco/process_frames/allframes2vid.py "$@"
 }
 
 function allsessionframes2vid(){
-    python ~/git/rat-loco/allsessionframes2vid.py "$@"
+    python ~/git/rat-loco/process_frames/allsessionframes2vid.py "$@"
 }
 
 function stackvids(){
-    python ~/git/rat-loco/stackvids.py "$@"
+    python ~/git/rat-loco/process_frames/stackvids.py "$@"
 }
 
 function stackallvids(){
-    python ~/git/rat-loco/stackallvids.py "$@"
+    python ~/git/rat-loco/process_frames/stackallvids.py "$@"
 }
 function syncanipose2manifold(){
     rsync -aP /home/snel/anipose/ /snel/share/data/anipose/

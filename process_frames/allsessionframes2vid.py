@@ -1,7 +1,7 @@
 import sys
 import os
 import time
-import allframes2vid
+import process_frames.allframes2vid as allframes2vid
 # from pdb import set_trace
 
 def allsessionframes2vid(num_frames, date='auto', downsampling_factor=1, destination='.', framerate=125, num_cams=4):
@@ -20,7 +20,13 @@ def allsessionframes2vid(num_frames, date='auto', downsampling_factor=1, destina
           os.chdir(os.path.expanduser(f"~/git/rat-loco/FLIR-Multicam/{iDir}/"))
           # get all unique base filenames, and write that to a file
           allframes2vid.allframes2vid(num_frames, downsampling_factor, destination, framerate, num_cams)
-
+     try:
+          os.system("rm unique_base_filenames.txt")
+     except FileExistsError:
+          print("Could not remove unique_base_filenames.txt, as it does not exist.")
+     except:
+          raise
+     
 if __name__ == '__main__':
      if len(list(sys.argv)) == 2:
           allsessionframes2vid(num_frames=sys.argv[1])

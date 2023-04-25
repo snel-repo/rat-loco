@@ -5,24 +5,16 @@ title = "Directory, Rat, Analysis, and Plotting Configurations"
 # OpenEphys folders below (list of strings)
 # should have the "Record Node ###" folder inside it
 OE = [
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-03_19-41-47',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-21-22',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_15-45-13',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
     ]
 # KiloSort folders below (list of strings)
 # should have the "Record Node ###" folder inside it, and
 # "KilosortResults" in the "recording99" folder
 KS = [
-    # "/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/",
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/cleopatra/2022-07-15_15-16-47_myo/'
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
     ]
 # Anipose folders below (list of strings)
 # should have the pose-3d folder inside it
@@ -62,9 +54,9 @@ vid_length=20 #10/20/30 seconds
 [rat.godzilla]
 bodyparts_list = []# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
 bodypart_for_alignment = ['palm_L_y'] # must provide 1 bodypart for alignment, e.g., palm_L_y
-session_date = ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9'] #['20221116-3','20221116-5','20221116-6','20221116-7','20221116-8','20221116-9'] | #['20221117-4']
-treadmill_speed = [5, 10, 5, 10, 10] # [10]
-treadmill_incline = [0, 0, 0, 0, 0] # [0]
+session_date = ['20221117-8', '20221117-10'] # ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9'] #['20221116-3','20221116-5','20221116-6','20221116-7','20221116-8','20221116-9'] | #['20221117-4']
+treadmill_speed = [15, 15]#[5, 10, 5, 10, 10] # [10]
+treadmill_incline = [0, 0]#[0, 0, 0, 0, 0] # [0]
 camera_fps = 125 #125 FPS
 vid_length = 60 #30/60 seconds
 
@@ -90,9 +82,9 @@ export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "multi_sort" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
-plot_units =  [11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
-do_plot = 2 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
+plot_type = "multijoin_bin_and_count" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
+plot_units =  [11,8,3]#,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
+do_plot = 1 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
 N_colors = 10 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
 plot_template = 'plotly_white'
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',

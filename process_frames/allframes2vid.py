@@ -1,6 +1,6 @@
 import sys
 import os
-import frames2vid
+import frames2vid as frames2vid
 
 def allframes2vid(num_frames, downsampling_factor=1, destination='.', framerate=125, num_cams=4):
      # get all unique base filenames, and write that to a file

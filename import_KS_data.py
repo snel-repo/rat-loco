@@ -75,8 +75,8 @@ def import_KS_data(chosen_rat, CFG, session_iterator):
                 kilosort_files.append(os.path.join(kilosort_folder, "custom_merges/final_merge/custom_merge.mat"))
             else:
                 # grab raw KS output
-                kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
-                kilosort_files.append(os.path.join(root, "spike_times.npy"))
+                kilosort_files.append(os.path.join(kilosort_folder, "spike_clusters.npy"))
+                kilosort_files.append(os.path.join(kilosort_folder, "spike_times.npy"))
                 if len(kilosort_files) != 2:
                     print("KiloSort Spike Times and/or Spike Clusters not found!")
                     return

@@ -63,8 +63,8 @@ vid_length=20 #10/20/30 seconds
 bodyparts_list = []# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
 bodypart_for_alignment = ['palm_L_y'] # must provide 1 bodypart for alignment, e.g., palm_L_y
 session_date = ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9'] #['20221116-3','20221116-5','20221116-6','20221116-7','20221116-8','20221116-9'] | #['20221117-4']
-treadmill_speed = [5, 10, 5, 10, 10]
-treadmill_incline = [0, 0, 0, 0, 0]
+treadmill_speed = [5, 10, 5, 10, 10] # [10]
+treadmill_incline = [0, 0, 0, 0, 0] # [0]
 camera_fps = 125 #125 FPS
 vid_length = 60 #30/60 seconds
 
@@ -82,7 +82,7 @@ origin_offsets = {x=-18,y='tailbase',z=135} # Values recorded from origin to tre
 save_binned_MU_data = 0 # set Boolean
 time_frame = [0,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms = 10
-num_rad_bins = 89
+num_rad_bins = 100
 smoothing_window = [10,10,10,10,10] # bins
 phase_align = false # set Boolean, pertains to process_spikes.smooth() and process_spikes.state_space()
 align_to = 'foot off' # "foot strike"/"foot off"

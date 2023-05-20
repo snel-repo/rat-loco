@@ -136,54 +136,65 @@ conda activate ratloco
 ### aliases and functions (user added) ###
 alias sshpoisson="ssh -Y snel@192.168.1.206"
 #alias rec="cd ~/git/rat-loco/FLIR-Multicam && python FLIR_Multicam.py 1"
-alias rec="cd ~/git/rat-loco/FLIR-Multicam && sudo nice -n -20 su -c '~/miniconda3/envs/ratloco/bin/python FLIR_Multicam.py 1' $USER"
+#alias rec="cd ~/git/rat-loco/FLIR-Multicam && sudo nice -n -20 su -c '~/miniconda3/envs/ratloco/bin/python FLIR_Multicam.py 1' $USER"
+alias rec="cd ~/git/rat-loco/FLIR-Multicam && sudo chrt -f 99 su -c '/home/$USER/miniconda3/envs/ratloco/bin/python FLIR_Multicam.py 1' $USER"
 alias coolero="nohup /home/snel/coolero/Coolero-x86_64.AppImage"
 alias cdoe='cd /snel/share/data/rodent-ephys/open-ephys/treadmill/'
 alias cdani="cd /snel/share/data/anipose/"
 
 function getframes(){
-	python ~/git/rat-loco/getframes.py "$@"
+    python ~/git/rat-loco/process_frames/getframes.py "$@"
 }
 
 function getvids(){
-	python ~/git/rat-loco/getvids.py "$@"
+    python ~/git/rat-loco/process_frames/getvids.py "$@"
 }
 
 function frames2vid(){
-	python ~/git/rat-loco/frames2vid.py "$@"
+    python ~/git/rat-loco/process_frames/frames2vid.py "$@"
 }
 
 function allframes2vid(){
-	python ~/git/rat-loco/allframes2vid.py "$@"
+    python ~/git/rat-loco/process_frames/allframes2vid.py "$@"
 }
 
 function allsessionframes2vid(){
-	python ~/git/rat-loco/allsessionframes2vid.py "$@"
+    python ~/git/rat-loco/process_frames/allsessionframes2vid.py "$@"
 }
 
 function stackvids(){
-	python ~/git/rat-loco/stackvids.py "$@"
+    python ~/git/rat-loco/process_frames/stackvids.py "$@"
 }
 
 function stackallvids(){
-	python ~/git/rat-loco/stackallvids.py "$@"
+    python ~/git/rat-loco/process_frames/stackallvids.py "$@"
 }
 function syncanipose2manifold(){
-	rsync -aP /home/snel/anipose/ /snel/share/data/anipose/
+    rsync -aP /home/snel/anipose/ /snel/share/data/anipose/
 }
 function makeanipose(){
-	prev_anipose_dir=$(ls -td ~/anipose/*/ | head -1)
-	prev_anipose_dir=${prev_anipose_dir%*/}
-	new_anipose_dir=~/anipose/session`date +'%Y%m%d'`
-	mkdir -p $new_anipose_dir/calibration
-	mkdir $new_anipose_dir/videos-raw
-	cp $prev_anipose_dir/calibration/* $new_anipose_dir/calibration/
-	cp $prev_anipose_dir/config.toml $new_anipose_dir/config.toml
-	for dir in ~/git/rat-loco/FLIR-Multicam/images`date +'%Y%m%d'`*/
-	do
-#		dir=${dir%*/}
-		cp $dir*.mp4 $new_anipose_dir/videos-raw/
-	done
+    echo
+    if [ -z "$1" ]
+        then
+            d=`date +'%Y%m%d'`
+            echo Creating anipose folder tree for session$d
+        else
+            d=$1
+            echo Creating anipose folder tree for session$d
+    fi
+    prev_anipose_dir=$(ls -d ~/anipose/*/ | sort -r | head -n 1)
+    new_anipose_dir=~/anipose/session$d
+    mkdir -p $new_anipose_dir/calibration
+    mkdir $new_anipose_dir/videos-raw
+    echo Copying calibration files and config from $prev_anipose_dir
+    prev_anipose_dir=${prev_anipose_dir%*/}
+    cp $prev_anipose_dir/calibration/* $new_anipose_dir/calibration/
+    cp $prev_anipose_dir/config.toml $new_anipose_dir/config.toml
+    for dir in ~/git/rat-loco/FLIR-Multicam/images$d*/
+    do
+        cp $dir*.mp4 $new_anipose_dir/videos-raw/
+    done
+    echo Done.
 }
 
 export PATH="/home/snel/.local/bin:$PATH"

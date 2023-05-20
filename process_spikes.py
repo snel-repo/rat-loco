@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
 from inspect import stack
-from pdb import set_trace
+# from pdb import set_trace
 # from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
 # from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -55,6 +55,10 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     # unpack chosen rat inputs
     (bodyparts_list,bodypart_for_alignment,session_date,treadmill_speed,
      treadmill_incline,camera_fps,vid_length) = CFG['rat'][chosen_rat].values()
+    if len(bodyparts_list)>0 and bodypart_for_alignment:
+        assert bodyparts_list[0] == bodypart_for_alignment[0], \
+            ("Error: If bodyparts_list is not empty, bodyparts_list[0] must be "
+             "the same as bodypart_for_alignment[0] in config.toml")
     
     # format inputs to avoid ambiguities
     session_date = session_date[iterator]
@@ -63,11 +67,11 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # extract data from dictionaries
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
@@ -94,9 +98,8 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     #     filtered_signal=chosen_anipose_df[bodypart_for_alignment[0]].values
 
     (processed_anipose_df, foot_strike_idxs, foot_off_idxs, _, step_slice, step_time_slice,
-     ref_bodypart_trace_list) = peak_align_and_filt(
-                                    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
-                                    )
+        ref_bodypart_trace_list) = peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict,
+                                                    CH_colors, MU_colors, CFG, iterator)
     
     # filter step peaks/troughs to be within chosen time_frame, but
     # only when time_frame=1 is not indicating to use the full dataset
@@ -136,7 +139,8 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         slice_for_ephys_during_video = slice(0,-1) # get full anipose traces, if time_frame==1
     else:
         # step_slice = slice(step_time_slice.start,step_time_slice.stop)
-        slice_for_ephys_during_video = slice(step_slice_bounds_in_ephys_time[0],step_slice_bounds_in_ephys_time[1])
+        slice_for_ephys_during_video = slice(step_slice_bounds_in_ephys_time[0],
+                                             step_slice_bounds_in_ephys_time[1])
     
     # cluster the spikes waveforms with PCA
     # pca = PCA(n_components=3)
@@ -149,16 +153,18 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         MU_channel_keys_list = [str(ch) for ch in ephys_channel_idxs_list]
         MU_spikes_dict = {key: None for key in MU_channel_keys_list}
         for channel_number in ephys_channel_idxs_list:
-            MU_spike_idxs = [] # initialize empty list for each channel to hold next sorted spike idxs
+            MU_spike_idxs = [] # init empty list for each channel to hold next sorted spike idxs
             for iAmplitudes in MU_spike_amplitudes_list:
                 if channel_number not in [-1,16]:
-                    ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[slice_for_ephys_during_video, channel_number]
+                    ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[
+                        slice_for_ephys_during_video, channel_number]
                     if filter_ephys == 'notch' or filter_ephys == 'both':
                         ephys_data_for_channel = iir_notch(
                             ephys_data_for_channel, ephys_sample_rate)
                     if filter_ephys == 'bandpass' or filter_ephys == 'both':
+                        # 350-7000Hz band
                         ephys_data_for_channel = butter_bandpass_filter(
-                            ephys_data_for_channel, 350.0, 7000.0, ephys_sample_rate) # 350-7000Hz band
+                            ephys_data_for_channel, 350.0, 7000.0, ephys_sample_rate) 
                     MU_spike_idxs_for_channel, _ = find_peaks(
                         -ephys_data_for_channel,
                         height=iAmplitudes,
@@ -180,8 +186,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     elif sort_method == 'kilosort':
         chosen_KS_dict = KS_dict[session_ID]
         MU_spikes_dict = {k:v for (k,v) in chosen_KS_dict.items() if k in plot_units}
-        assert len(MU_spikes_dict)==len(plot_units), "Selected MU key could be missing from input KS dictionary."
-        # set_trace()
+        assert len(MU_spikes_dict)==len(plot_units), \
+            ("Selected MU key could be missing from input KS dictionary, "
+             "try indexing from 1 in config.toml: [plotting]: plot_units.")
     
     # MU_spike_idxs = np.array(MU_spike_idxs,dtype=object).squeeze().tolist()
     
@@ -202,7 +209,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         row_spec_list[0] = [{'rowspan': len(bodyparts_list)}]
         row_spec_list[len(bodyparts_list)] = [{'rowspan': len(ephys_channel_idxs_list)}]
         row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
-            [{'rowspan': number_of_channels//2+1}]
+            [{'rowspan':1}] # number_of_channels//2+1}]
     elif sort_method == 'kilosort':
         number_of_channels = 1
         number_of_rows = len(bodyparts_list)+len(ephys_channel_idxs_list)+len(MU_spikes_dict)//6+1
@@ -210,7 +217,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         row_spec_list[0] = [{'rowspan': len(bodyparts_list)}]
         row_spec_list[len(bodyparts_list)] = [{'rowspan': len(ephys_channel_idxs_list)}]
         row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
-            [{'rowspan': len(MU_spikes_dict)//6+1}]
+            [{'rowspan':1}] #len(MU_spikes_dict)//6+1}]
 
     if sort_method=="kilosort":
         MU_labels = list(KS_dict.keys())[iterator]
@@ -221,88 +228,97 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         rows=number_of_rows, cols=1,
         specs=row_spec_list,
         shared_xaxes=True,
-        # vertical_spacing=0.0,
-        # horizontal_spacing=0.02,
+        vertical_spacing=0.05,
+        horizontal_spacing=0,
         subplot_titles=(
         f"<b>Locomotion Kinematics: {list(anipose_dict.keys())[iterator]}</b>",
-        f"<b>Neural Activity: {MU_labels}</b>"
-        ))
-
+        f"<b>Neural Activity: {MU_labels}</b>",
+        f"<b>Sorted Spikes: {MU_labels}</b>") if len(bodyparts_list)>0 \
+                                                else (f"<b>Neural Activity: {MU_labels}</b>",
+                                                      f"<b>Sorted Spikes: {MU_labels}</b>"))
+    
     # plot all chosen bodyparts_list, including peak and trough locations for step identification
     bodypart_counter = 0
-    color_list =['cornflowerblue','darkorange','green','red'] #['cornflowerblue','royalblue','darkorange','tomato']
-    for name, values in chosen_anipose_df.items():
-        if name in bodyparts_list:
-            if name == bodypart_for_alignment[0]:
-                # filtered signal plot (used for alignment)
+    color_list =['cornflowerblue','darkorange','green','red'] 
+    # ^ alternate scheme override: ['cornflowerblue','royalblue','darkorange','tomato']
+    if len(bodyparts_list)>0:
+        if bodypart_for_alignment[0] not in bodyparts_list:
+            print(
+                ("Warning! bodypart_for_alignment is not in bodyparts_list, "
+                 "so foot offs/strikes will not be plotted.")
+                  )
+        for name, values in chosen_anipose_df.items():
+            if name in bodyparts_list:
+                if name == bodypart_for_alignment[0]:
+                    # filtered signal plot (used for alignment)
+                    fig.add_trace(go.Scatter(
+                        x=time_axis_for_anipose[step_time_slice],
+                        y=np.round(processed_anipose_df[bodypart_for_alignment[0]][step_time_slice], decimals=1),
+                        name=bodyparts_list[bodypart_counter]+' processed' if filter_all_anipose or origin_offsets
+                            else bodyparts_list[bodypart_counter],
+                        mode='lines',
+                        opacity=.9,
+                        line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
+                        row=1, col=1
+                        )
+                    # foot strikes
+                    fig.add_trace(go.Scatter(
+                        x=time_axis_for_anipose[foot_strike_slice_idxs],
+                        y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs], decimals=1),
+                        name=bodyparts_list[bodypart_counter]+' strike',
+                        mode='markers',
+                        marker = dict(color='black'),
+                        opacity=.9,
+                        line=dict(width=3)),
+                        row=1, col=1
+                        )
+                    # foot offs               
+                    fig.add_trace(go.Scatter(
+                        x=time_axis_for_anipose[foot_off_slice_idxs],
+                        y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs], decimals=1),
+                        name=bodyparts_list[bodypart_counter]+' off',
+                        mode='markers',
+                        marker = dict(color='blue'),
+                        opacity=.9,
+                        line=dict(width=3)),
+                        row=1, col=1
+                        )
+                    bodypart_counter += 1 # increment for each matching bodypart
+                else:
+                    if origin_offsets:
+                        fig.add_trace(go.Scatter(
+                            x=time_axis_for_anipose[step_time_slice],
+                            y=np.round(processed_anipose_df[name][step_time_slice], decimals=1), # + 25*bodypart_counter,
+                            name=bodyparts_list[bodypart_counter]+' processed',
+                            mode='lines',
+                            opacity=.9,
+                            line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
+                            row=1, col=1,
+                            )
+                    else:
+                        fig.add_trace(go.Scatter(
+                            x=time_axis_for_anipose[step_time_slice],
+                            y=np.round(values.values[step_time_slice], decimals=1), # + 25*bodypart_counter,
+                            name=bodyparts_list[bodypart_counter],
+                            mode='lines',
+                            opacity=.9,
+                            line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
+                            row=1, col=1,
+                            )
+                    bodypart_counter += 1 # increment for each matching bodypart
+        if bodypart_ref_filter and origin_offsets is not False:
+            # plot x/y/z reference trace
+            dims = [key for key in origin_offsets.keys() if type(origin_offsets[key]) is not int]
+            for dim, ref_trace in zip(dims, ref_bodypart_trace_list):
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_anipose[step_time_slice],
-                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][step_time_slice],1),
-                    name=bodyparts_list[bodypart_counter]+' processed' if filter_all_anipose or origin_offsets
-                        else bodyparts_list[bodypart_counter],
+                    y=np.round(ref_trace[step_time_slice], decimals=1),
+                    name=f"Ref: {bodypart_for_reference}_{dim}, {bodypart_ref_filter}Hz lowpass",
                     mode='lines',
                     opacity=.9,
-                    line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
+                    line=dict(width=3,color="lightgray",dash='dash')),
                     row=1, col=1
                     )
-                # foot strikes
-                fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[foot_strike_slice_idxs],
-                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],1),
-                    name=bodyparts_list[bodypart_counter]+' strike',
-                    mode='markers',
-                    marker = dict(color='black'),
-                    opacity=.9,
-                    line=dict(width=3)),
-                    row=1, col=1
-                    )
-                # foot offs               
-                fig.add_trace(go.Scatter(
-                    x=time_axis_for_anipose[foot_off_slice_idxs],
-                    y=np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_off_slice_idxs],1),
-                    name=bodyparts_list[bodypart_counter]+' off',
-                    mode='markers',
-                    marker = dict(color='blue'),
-                    opacity=.9,
-                    line=dict(width=3)),
-                    row=1, col=1
-                    )
-                bodypart_counter += 1 # increment for each matching bodypart
-            else:
-                if origin_offsets:
-                    fig.add_trace(go.Scatter(
-                        x=time_axis_for_anipose[step_time_slice],
-                        y=np.round(processed_anipose_df[name][step_time_slice],1), # + 25*bodypart_counter,
-                        name=bodyparts_list[bodypart_counter]+' processed',
-                        mode='lines',
-                        opacity=.9,
-                        line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
-                        row=1, col=1,
-                        )
-                else:
-                    fig.add_trace(go.Scatter(
-                        x=time_axis_for_anipose[step_time_slice],
-                        y=np.round(values.values[step_time_slice],1), # + 25*bodypart_counter,
-                        name=bodyparts_list[bodypart_counter],
-                        mode='lines',
-                        opacity=.9,
-                        line=dict(width=2,color=color_list[bodypart_counter%len(color_list)])),
-                        row=1, col=1,
-                        )
-                bodypart_counter += 1 # increment for each matching bodypart
-    if bodypart_ref_filter and origin_offsets is not False:
-        # plot x/y/z reference trace
-        dims = [key for key in origin_offsets.keys() if type(origin_offsets[key]) is not int]
-        for dim, ref_trace in zip(dims, ref_bodypart_trace_list):
-            fig.add_trace(go.Scatter(
-                x=time_axis_for_anipose[step_time_slice],
-                y=np.round(ref_trace[step_time_slice],1),
-                name=f"Ref: {bodypart_for_reference}_{dim}, {bodypart_ref_filter}Hz lowpass",
-                mode='lines',
-                opacity=.9,
-                line=dict(width=3,color="lightgray",dash='dash')),
-                row=1, col=1
-                )
     # initialize counter to keep track of total unit count across all channels
     unit_counter = np.int16(0)
     # plot all ephys traces and/or SYNC channel
@@ -316,8 +332,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                 slice_for_ephys_during_video,channel_number] - row_spacing
                 if channel_number not in [-1,16]
                 else (chosen_ephys_data_continuous_obj.samples[
-                    slice_for_ephys_during_video,channel_number]+4)*0.5e3
-                )),
+                    slice_for_ephys_during_video,channel_number]+4)*0.5e3), decimals=1),
             name=f"CH{channel_number}" if channel_number not in [-1,16] else "SYNC",
             mode='lines',
             marker = dict(color=CH_colors[color_stride*iChannel]) if sort_method == 'thresholding' else dict(color=CH_colors[color_stride*iChannel]),
@@ -348,11 +363,13 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                 fig.add_trace(go.Scatter(
                     x=time_axis_for_ephys[ # index where spikes are, starting after the video
                         MU_spikes_dict_for_unit],
-                    y=np.round(chosen_ephys_data_continuous_obj.samples[
-                        MU_spikes_dict_for_unit,channel_number]-row_spacing),
+                    y=np.round(
+                        chosen_ephys_data_continuous_obj.samples[MU_spikes_dict_for_unit,channel_number]-row_spacing,
+                        decimals=1),
                     name=f"CH{channel_number}, Unit {iUnitKey}",
                     mode='markers',
-                    marker = dict(color=MU_colors[color_stride*unit_counter]) if sort_method == 'thresholding' else dict(color=MU_colors[color_stride*(unit_counter % len(UnitKeys))]),
+                    marker = dict(color=MU_colors[color_stride*unit_counter]) if sort_method == 'thresholding' \
+                        else dict(color=MU_colors[color_stride*(unit_counter % len(UnitKeys))]),
                     opacity=.9,
                     line=dict(width=3)),
                     row=len(bodyparts_list)+1, col=1
@@ -363,12 +380,13 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                         x=time_axis_for_ephys[ # index where spikes are, starting after the video
                             MU_spikes_dict_for_unit],
                         y=np.zeros(len(time_axis_for_ephys[slice_for_ephys_during_video])).astype(np.int16)-unit_counter,
-                        name=f"CH{channel_number}, Unit {iUnitKey}" if sort_method == 'thresholding' else f"KS Cluster: {iUnitKey}",
+                        name=f"CH{channel_number}, Unit {iUnitKey}" if sort_method == 'thresholding' \
+                                                                    else f"KS Cluster: {iUnitKey}",
                         mode='markers',
                         marker_symbol='line-ns',
                         marker = dict(color=MU_colors[color_stride*unit_counter],
                                     line_color=MU_colors[color_stride*unit_counter],
-                                    line_width=0.8,
+                                    line_width=1.2,
                                     size=10),
                         opacity=1),
                         row=row2,
@@ -401,6 +419,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
 
     if do_plot:
         iplot(fig)
+        # fig.write_html(f"/home/sean/Downloads/{session_ID}_{str(ephys_channel_idxs_list)}.html")
     if export_data:
         from scipy.io import savemat, loadmat
         # time_axis_for_ephys=time_axis_for_ephys[slice_for_ephys_during_video],
@@ -410,7 +429,6 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         # foot_strike_idxs = np.round(processed_anipose_df[bodypart_for_alignment[0]][foot_strike_slice_idxs],1),
         # anipose_data = {k: np.array(v,dtype=float) for k, v in chosen_anipose_df.to_dict('list').items()},
         # session_ID = session_ID
-        # set_trace()
         export_dict = dict(time_axis_for_ephys=time_axis_for_ephys[slice_for_ephys_during_video],
                            ephys_data = chosen_ephys_data_continuous_obj.samples[slice_for_ephys_during_video],
                            MU_spikes_by_KS_cluster = {'unit'+str(k).zfill(2): np.array(v+1,dtype=np.int64) for k, v in sliced_MU_spikes_dict.items()},
@@ -423,7 +441,6 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                            session_ID = session_ID)
         savemat(f'{session_ID}.mat', export_dict, oned_as='column')
         # x = loadmat(f'{session_ID}.mat')
-        # set_trace()
     return (
         MU_spikes_dict, time_axis_for_ephys, chosen_anipose_df, time_axis_for_anipose,
         ephys_sample_rate, start_video_capture_ephys_idx, slice_for_ephys_during_video, session_ID, figs
@@ -449,11 +466,11 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # check inputs for problems
     if 16 in ephys_channel_idxs_list:
@@ -474,12 +491,12 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     #     rat_name=rat_name, treadmill_speed=treadmill_speed, treadmill_incline=treadmill_incline,
     #     camera_fps=camera_fps, align_to=align_to, time_frame=time_frame)
 
-    (trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
-     kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
-     post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
+    (
+        trialized_anipose_df, keep_trial_set, foot_strike_idxs, foot_off_idxs, sliced_step_stats,
+        kept_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list, pre_align_offset,
+        post_align_offset, trial_reject_bounds_mm, trial_reject_bounds_sec) = trialize_steps(
         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
         )
-    # set_trace()
     # extract data dictionary (with keys for each unit) for the chosen electrophysiology channel
     if sort_method == 'thresholding':
         MU_spikes_dict = MU_spikes_dict[str(ephys_channel_idxs_list[0])]#+slice_for_ephys_during_video.start
@@ -549,7 +566,6 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
                 MU_spikes_3d_array_ephys_time[ii, MU_spikes_idxs_for_step, iUnit] = 1
             # else: # mark slices with NaN's for later removal if not inside the keep_trial_set
             #     MU_spikes_3d_array_ephys_time[ii, :, iUnit] = np.nan
-            # set_trace()
         # create phase aligned step indexes, with max index for each step set to 2π    
         bin_width_eph_2π = []
         for ii, πStep in enumerate(keep_trial_set): #range(number_of_steps): # for each step
@@ -609,7 +625,6 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     number_of_bins_in_2π_step = np.ceil(2*np.pi/bin_width_radian).astype(np.int32)
     bin_width_eph_2π = np.round(
         MU_spikes_3d_array_ephys_2π.shape[1]/number_of_bins_in_2π_step).astype(np.int32)
-    # set_trace()
     # create binned 3d array with shape: Steps x Bins x Units
     MU_spikes_3d_array_binned = np.zeros((
         MU_spikes_3d_array_ephys_time.shape[0],
@@ -639,7 +654,6 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     # sum all spikes across step cycles
     MU_spikes_count_across_all_steps = MU_spikes_3d_array_binned.sum(0).sum(0)
     order_by_count = np.argsort(MU_spikes_count_across_all_steps)
-    # set_trace()
     color_stride = 1
     fig1 = make_subplots(
         rows=1, cols=2,
@@ -654,6 +668,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         MU_iter = MU_spikes_dict.keys()
         
     # for iUnit, iUnitKey in enumerate(np.fromiter(MU_spikes_dict.keys(),'int')[order_by_count[::-1]]):
+    # import pdb; pdb.set_trace()
     for iUnit, iUnitKey in enumerate(np.fromiter(MU_iter,'int')[order_by_count[::-1]]):
         try:
             MU_step_aligned_idxs = np.concatenate(MU_step_aligned_spike_idxs_dict[str(iUnitKey)]).ravel()            
@@ -663,7 +678,8 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         fig1.add_trace(go.Histogram(
             x=MU_step_aligned_idxs_ms, # ms
             xbins=dict(start=0, size=bin_width_ms),
-            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if (
+                sort_method=='thresholding') else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit]),
             row=1, col=1
             )
@@ -678,7 +694,8 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         fig1.add_trace(go.Histogram(
             x=MU_step_2π_aligned_idxs, # radians
             xbins=dict(start=0, size=bin_width_radian),
-            name=str(iUnitKey)+"uV crossings" if sort_method=='thresholding' else "KS cluster: "+str(iUnitKey),
+            name=str(iUnitKey)+"uV crossings" if (
+                sort_method=='thresholding') else "KS cluster: "+str(iUnitKey),
             marker_color=MU_colors[color_stride*iUnit],
             showlegend=False),
             row=1, col=2
@@ -747,11 +764,12 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
         from scipy.io import savemat
         pass
 
-    if save_binned_MU_data is not False:
+    if save_binned_MU_data is True:
         np.save(session_ID+"_time.npy",MU_spikes_3d_array_binned, allow_pickle=False)
         np.save(session_ID+"_phase.npy",MU_spikes_3d_array_binned_2π, allow_pickle=False)
         
     return(
+        MU_spikes_dict,
         MU_step_aligned_spike_idxs_dict,
         MU_step_aligned_spike_counts_dict,
         MU_step_2π_warped_spike_idxs_dict,
@@ -766,7 +784,9 @@ def raster(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
     ):
     
-    (MU_step_aligned_spike_idxs_dict,
+    (
+        MU_spikes_dict,
+        MU_step_aligned_spike_idxs_dict,
         MU_step_aligned_spike_counts_dict,
         MU_step_2π_warped_spike_idxs_dict,
         MU_spikes_3d_array_ephys_time,
@@ -774,7 +794,9 @@ def raster(
         MU_spikes_3d_array_binned_2π,
         MU_spikes_count_across_all_steps, steps_to_keep_arr,
         step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
-    ) = bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator)
+    ) = bin_and_count(
+        chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
+        )
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -795,7 +817,7 @@ def raster(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    if do_plot==2:
+    if do_plot==2: # override and ensure all plots are displayed when do_plot==2
         do_plot = True
     else: # only display plot if rat_loco_analysis() is the caller
         do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
@@ -806,7 +828,6 @@ def raster(
     ch_counter = 0
     unit_counter = 0
     step_counter = 0
-    # set_trace()
     fig = go.Figure()
     # for each channel and each trial's spike time series, plot onto the raster: plotly scatters
     # for iChan in 
@@ -863,14 +884,16 @@ def smooth(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
     ):
     
-    (MU_step_aligned_spike_idxs_dict,
-    MU_step_aligned_spike_counts_dict,
-    MU_step_2π_warped_spike_idxs_dict,
-    MU_spikes_3d_array_ephys_time,
-    MU_spikes_3d_array_binned,
-    MU_spikes_3d_array_binned_2π,
-    MU_spikes_count_across_all_steps, steps_to_keep_arr,
-    step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
+    (
+        MU_spikes_dict,
+        MU_step_aligned_spike_idxs_dict,
+        MU_step_aligned_spike_counts_dict,
+        MU_step_2π_warped_spike_idxs_dict,
+        MU_spikes_3d_array_ephys_time,
+        MU_spikes_3d_array_binned,
+        MU_spikes_3d_array_binned_2π,
+        MU_spikes_count_across_all_steps, steps_to_keep_arr,
+        step_idxs_in_ephys_time, ephys_sample_rate, session_ID, figs
     ) = bin_and_count(
         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator
         )
@@ -894,11 +917,11 @@ def smooth(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     # initialize 3d numpy array with shape: Steps x Bins x Units
     if phase_align is True:
@@ -1011,11 +1034,11 @@ def state_space(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
     # select units for plotting
     if sort_method == 'kilosort':
         sliced_MU_smoothed_3d_array = MU_smoothed_spikes_3d_array # [:,:,plot_units]
@@ -1143,11 +1166,11 @@ def MU_space_stepwise(
     treadmill_incline = str(treadmill_incline[iterator]).zfill(2)
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
-    # only display plot if rat_loco_analysis() is the caller
-    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
-        do_plot = False
-    if do_plot==2: # override above, always plot if do_plot==2
+    if do_plot==2: # override and ensure all plots  when 
         do_plot = True
+    else: # only display plot if rat_loco_analysis() is the caller
+        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+
 
     iPar = 0
     # session_ID_lst = []
@@ -1259,42 +1282,8 @@ def MU_space_stepwise(
             bin_units = "ms"
             
         big_fig[iPar].update_xaxes(title_text=f"<b>Bins ({bin_width} {bin_units})</b>",row=len(plot_units)*number_of_steps+2, col=1)
-        big_fig[iPar].update_yaxes(title_text=f"<b>Stepwise Binned Spike Counts</b>",row=len(plot_units)*number_of_steps+2, col=1)
-        
-        # if activity_matrix is binned_spike_array:
-        #     big_fig[iPar].add_scatter(x=[int(0.20*activity_matrix.shape[1]),int(0.20*activity_matrix.shape[1])],
-        #                               y=[-1,-6], mode='lines', line_width=5,line_color="black", name="scalebar",
-        #                               row=len(plot_units)*number_of_steps+2, col=1)
-        #     big_fig[iPar].add_scatter(x=[int(0.19*activity_matrix.shape[1])], y=[-3],
-        #                               text="<b>5 spikes<br>per bin</b>", textposition="middle left",
-        #                               mode='text', line_width=5,line_color="black", name="label",
-        #                               row=len(plot_units)*number_of_steps+2, col=1)
-        # tried barplot, didn't work
-        # for iStep in range(binned_spike_array.shape[0]):
-        #     big_fig[iPar].data[iStep]['line']['color'] = MU_colors[iStep]
-        #     big_fig[iPar].data[iStep]['opacity'] = 0.5
-        #     big_fig[iPar].data[iStep]['line']['width'] = 5
-        #     for iUnit in plot_units:                
-        #         big_fig[iPar].add_bar(
-        #             x=np.arange(len(binned_spike_array[iStep,:,iUnit])),
-        #             y=binned_spike_array[iStep,:,iUnit],
-        #             row=len(plot_units)*number_of_steps+iStep, col=1,
-        #             name=f"step{steps_to_keep_arr[iStep]}, unit{iUnit}",
-        #             marker_color=MU_colors[iStep % len(MU_colors)],
-        #             opacity=0.5)
-                    
-        # i_session_date = session_date[iPar]
-        # i_rat_name = str(rat_name[iPar]).lower()
-        # i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
-        # i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
-        # session_ID_lst.append(
-        #     f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}")
-        # trialized_anipose_dfs_lst.append(trialized_anipose_df)
-        # trialized_anipose_dfs_lst[iPar]['Labels'] = pd.Series(int(i_treadmill_incline) * \
-        #                         np.ones(anipose_dict[session_ID_lst[iPar]].shape[0]))
-        
-        # big_fig[iPar].add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
-        
+        big_fig[iPar].update_yaxes(title_text=f"<b>Stepwise Binned Spike Counts</b>",row=len(plot_units)*number_of_steps+2, col=1)        
+       
         # Edit the layout
         if len(plot_units)>=3 and MU_smoothed_spikes_3d_array.any(1).any(0).sum()>=3:
             big_fig[iPar].update_layout(

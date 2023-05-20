@@ -416,7 +416,10 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
     # session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     # only display plot if rat_loco_analysis() is the caller
-    do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+    if (plot_type.__contains__('multi') or not stack()[1].function == 'rat_loco_analysis'):
+        do_plot = False
+    if do_plot==2: # override above, always plot if do_plot==2
+        do_plot = True
     
     session_ID_lst = []
     trialized_anipose_dfs_lst = []

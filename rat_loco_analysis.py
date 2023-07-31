@@ -5,13 +5,13 @@ from config import config as CFG
 
 ### Chosen Rat ###
 chosen_rat = 'godzilla' # <-- Choose Rat HERE
-chosen_session = 1 # <-- Choose Session HERE. # From session_date list, provide an index. 
+chosen_session = 0 # <-- Choose Session HERE. # From session_date list, provide an index. 
                                               # This only applies to single-session analyses
 
 ### Process Chosen Plotting Parameters
 # black to grey
 CH_colors = cl.to_rgb(cl.interp(cl.scales['6']['seq']['Greys'],
-                                CFG['plotting']['N_colors']))[
+                                2*CFG['plotting']['N_colors']))[
                                     -1:-(CFG['plotting']['N_colors']+1):-1]
 # rainbow scale
 MU_colors = cl.to_rgb(cl.interp(cl.scales['10']['div']['Spectral'],

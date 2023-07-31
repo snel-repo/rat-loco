@@ -14,7 +14,7 @@ def sort_plot(chosen_rat, OE_dict, KS_dict, anipose_dict, MU_spikes_dict, CH_col
               slice_for_ephys_during_video):
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
         bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
         trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
         num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -251,7 +251,7 @@ def bin_and_count_plot(MU_spikes_dict_keys, ephys_sample_rate, session_ID, sort_
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
         bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
         trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
         num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()

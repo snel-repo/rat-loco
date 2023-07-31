@@ -46,7 +46,7 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -68,9 +68,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots  when 
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
 
 
     # extract data from dictionaries
@@ -188,7 +188,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         MU_spikes_dict = {k:v for (k,v) in chosen_KS_dict.items() if k in plot_units}
         assert len(MU_spikes_dict)==len(plot_units), \
             ("Selected MU key could be missing from input KS dictionary, "
-             "try indexing from 1 in config.toml: [plotting]: plot_units.")
+             "check IDs in Phy, or try indexing from 1 in config.toml: [plotting]: plot_units.")
     
     # MU_spike_idxs = np.array(MU_spike_idxs,dtype=object).squeeze().tolist()
     
@@ -417,9 +417,10 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     fig.update_layout(template=plot_template)
     figs = [fig]
 
-    if do_plot:
+    if do_plot==3:
+        fig.write_html(f"/home/sean/Downloads/{session_ID}.html")#_{str(ephys_channel_idxs_list)}.html")
+    if plot_flag:
         iplot(fig)
-        # fig.write_html(f"/home/sean/Downloads/{session_ID}_{str(ephys_channel_idxs_list)}.html")
     if export_data:
         from scipy.io import savemat, loadmat
         # time_axis_for_ephys=time_axis_for_ephys[slice_for_ephys_during_video],
@@ -449,7 +450,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
 def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -467,9 +468,9 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots  when 
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
 
 
     # check inputs for problems
@@ -757,7 +758,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     fig2.update_yaxes(matches='y')
     figs = [fig1, fig2]
 
-    if do_plot:
+    if plot_flag:
         iplot(fig1)
         iplot(fig2)
     if export_data:
@@ -800,7 +801,7 @@ def raster(
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -818,9 +819,9 @@ def raster(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots are displayed when do_plot==2
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
     
     number_of_steps = MU_spikes_3d_array_ephys_time.shape[0]
     samples_per_step = MU_spikes_3d_array_ephys_time.shape[1]
@@ -870,7 +871,7 @@ def raster(
     # set theme to chosen template
     fig.update_layout(template=plot_template)
         
-    if do_plot:
+    if plot_flag:
         iplot(fig)
     if export_data:
         from scipy.io import savemat
@@ -900,7 +901,7 @@ def smooth(
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -918,9 +919,9 @@ def smooth(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots  when 
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
 
 
     # initialize 3d numpy array with shape: Steps x Bins x Units
@@ -985,7 +986,7 @@ def smooth(
     # set theme to chosen template
     # fig.update_layout(template=plot_template)
     
-    if do_plot:
+    if plot_flag:
         iplot(fig)
     if export_data:
         from scipy.io import savemat
@@ -1017,7 +1018,7 @@ def state_space(
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -1035,9 +1036,9 @@ def state_space(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots  when 
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
 
     # select units for plotting
     if sort_method == 'kilosort':
@@ -1134,7 +1135,7 @@ def state_space(
     # set theme to chosen template
     # fig.update_layout(template=plot_template)
     
-    if do_plot:
+    if plot_flag:
         iplot(fig)
     if export_data:
         from scipy.io import savemat
@@ -1149,7 +1150,7 @@ def MU_space_stepwise(
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
      trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
@@ -1167,9 +1168,9 @@ def MU_space_stepwise(
     session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
     
     if do_plot==2: # override and ensure all plots  when 
-        do_plot = True
+        plot_flag = True
     else: # only display plot if rat_loco_analysis() is the caller
-        do_plot = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
+        plot_flag = True if (stack()[1].function == 'rat_loco_analysis' and not plot_type.__contains__('multi')) else False
 
 
     iPar = 0

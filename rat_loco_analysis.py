@@ -288,10 +288,12 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
 if __name__ == "__main__":    
     session_iterator = list(range(len(CFG['rat'][chosen_rat]['session_date'])))
     OE_dict, KS_dict, anipose_dict = {},{},{}
-    OE_dict = import_OE_data(chosen_rat, CFG, session_iterator)
     anipose_dict = import_anipose_data(chosen_rat, CFG, session_iterator)
+    OE_dict = import_OE_data(chosen_rat, CFG, session_iterator)
+    #set_trace()
     if CFG['analysis']['sort_method'] =='kilosort':
         KS_dict = import_KS_data(chosen_rat, CFG, session_iterator)
+        #set_trace()
     rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator)
     
 

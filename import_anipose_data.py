@@ -15,6 +15,7 @@ def _filter_csv_files(chosen_rat, CFG, session_iterator_copy, directory_name):
         treadmill_incline = str(CFG['rat'][chosen_rat]['treadmill_incline'][iSess]).zfill(2)
         session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
         file_list = os.listdir(directory_name)
+        #set_trace()
         for filename in file_list:
             if filename.endswith(".csv"):
                 if filename.__contains__(session_ID):
@@ -50,8 +51,10 @@ def import_anipose_data(chosen_rat, CFG, session_iterator):
         [csv_file_list.append(file_list[iFile]) for iFile in range(len(file_list)) if file_list[iFile].endswith('.csv')]
         for (session_ID, df) in _filter_csv_files(chosen_rat, CFG, session_iterator_copy, pose_3d_path):
             # add date string to filename, apply lowercase, remove '.csv' suffix, then append to list
+            #set_trace()
             list_of_session_IDs.append(session_ID.lower().split('/')[-1].split('.')[0])
             list_of_pose_3d_dataframes.append(df)
+    #set_trace()
     anipose_data_dict = dict(zip(list_of_session_IDs,list_of_pose_3d_dataframes))
     print("Loaded Anipose files:   ", anipose_data_dict.keys())
     return anipose_data_dict

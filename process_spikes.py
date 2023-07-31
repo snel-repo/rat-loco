@@ -7,6 +7,8 @@ from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
 from inspect import stack
 from pdb import set_trace
+import pandas as pd
+
 # from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
 # from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -48,7 +50,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -70,7 +72,9 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         do_plot = True
 
     # extract data from dictionaries
+    
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
+    #set_trace()
     chosen_anipose_df = anipose_dict[session_ID]
 
     # create time axes
@@ -376,6 +380,54 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
                         )
                 unit_counter+=1
     
+ #   button_layer_1_height = 0.25
+ #   buttons_list = []
+ #   traceID = 0
+    
+    #print((list(fig['data'])))
+ #   for iChannel, channel_number in enumerate(ephys_channel_idxs_list):
+ #       dict_channels_button = dict(
+ #           args=[{'visible':True},[i for i,x in enumerate(fig['data']) if f"CH{channel_number}" in x.name]],
+ #           args2=[{'visible':False}, [i for i,x in enumerate(fig['data']) if f"CH{channel_number}" in x.name]],
+ #           label = str(channel_number),
+ #           method = "restyle"
+ #       )
+#
+ #       dict_update_button = dict(
+ #           args=[{'y': [((x.y / 1000)) for i,x in enumerate(fig['data'])]}],
+ #           args2=[{'y': [((x.y + 1)) for i,x in enumerate(fig['data'])]}],
+ #           #args2 = [{'y': [abs((x.y)*1000) for i,x in enumerate(fig['data']) if f"CH{channel_number}" not in x.name]}],
+ #           label = str(channel_number) + " update",
+ #           method="update",
+ #           name=f"CH{channel_number}"
+ #       )
+ #       #set_trace()
+#
+ #       traceID += 1
+#
+ #       buttons_list.append(dict_channels_button)
+ #       buttons_list.append(dict_update_button)
+#
+ #   
+ #          
+ #   fig.update_layout(
+ #       updatemenus=[
+ #           dict(
+ #               buttons = buttons_list,
+ #               type = "buttons",
+ #               direction="right",
+ #               pad={"r": 10, "t": 10},
+ #               showactive=True,
+ #               x=0.0,
+ #               xanchor="left",
+ #               y=button_layer_1_height,
+ #               yanchor="top"
+ #           ),
+ #       ]
+ #   )
+#
+
+
     fig.update_xaxes(
         title_text="<b>Time (s)</b>",
         row = len(bodyparts_list)+len(ephys_channel_idxs_list)+1,
@@ -434,7 +486,7 @@ def bin_and_count(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colo
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -780,7 +832,7 @@ def raster(
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -879,7 +931,7 @@ def smooth(
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -996,7 +1048,7 @@ def state_space(
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -1128,7 +1180,7 @@ def MU_space_stepwise(
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()

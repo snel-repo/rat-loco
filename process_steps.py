@@ -7,6 +7,7 @@ from scipy.signal import find_peaks, butter, sosfiltfilt, medfilt
 from IPython.display import display
 from inspect import stack
 from pdb import set_trace
+import matplotlib.pyplot as plt
 
 # create highpass filter to remove baseline from foot tracking for better peak finding performance
 def butter_highpass(cutoff, fs, order=2):
@@ -49,7 +50,7 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -96,9 +97,12 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
                         cutoff=bodypart_ref_filter, fs=camera_fps, order=1))
                 else:
                     ref_bodypart_trace_list.append(bodypart_anipose_df[bodypart_for_reference]+iDim)
+                #if bodypart_for_reference != origin_offsets[iDim[-1]]:
                 for iCol in body_dim_cols:
-                    ref_aligned_df[iCol] = \
-                        bodypart_anipose_df[iCol] - ref_bodypart_trace_list[-1]
+                    #set_trace()
+                    if bodypart_for_reference not in iCol:
+                        ref_aligned_df[iCol] = \
+                            bodypart_anipose_df[iCol] - ref_bodypart_trace_list[-1]
             else:
                 raise TypeError("origin_offsets must be a dict. Keys must be 'x'/'y'/'z' and values must be either type `int` or `str`.")
     # if origin_offsets is not False:
@@ -232,6 +236,12 @@ def peak_align_and_filt(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, M
     # plt.title(r'Check Peaks for ' + str(bodypart_to_filter))
     # plt.show()
     # print(foot_strike_idxs - foot_off_idxs)
+
+    #set_trace()
+    #calculate reference bodypart velocity in xyz axes and append to dataframe
+    processed_anipose_df = get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmill_speed)   
+    #set_trace()
+
     return processed_anipose_df, foot_strike_idxs, foot_off_idxs, sliced_step_stats, step_slice, step_time_slice, ref_bodypart_trace_list
 
 def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, iterator):
@@ -240,7 +250,7 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -368,12 +378,40 @@ def trialize_steps(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_col
                 drop_trial_set.update(all_trial_set - keep_trial_set)
         else:
             raise TypeError("Wrong type specified for `trial_reject_bounds_mm` parameter in `rat_loco_analysis.py`")
-        
-        for iTrial in drop_trial_set:
-            # drop out of bounds trials from DataFrame in place, use log10 to get number of decimals for zfilling
-            trialized_anipose_df.drop( 
-                list(trialized_anipose_df.filter(like = \
-                    f"_{str(iTrial).zfill(int(1+np.log10(true_step_idx.max())))}")), axis=1, inplace=True)
+
+    if trial_reject_bounds_vel:
+
+        reject_trials_temp = set()
+        keep_trials_temp = set()
+
+        lower_bound = trial_reject_bounds_vel[0]
+        upper_bound = trial_reject_bounds_vel[1]
+        #set_trace()
+
+        if (type(lower_bound) is float) & (type(upper_bound) is float):
+            velocity_dictionary = {k:v for (k,v) in trialized_anipose_df.items() if bodypart_for_reference+'_y_vel' in k}
+            trial_num = 0
+            for iTrial in velocity_dictionary:
+                velocity_condition = (velocity_dictionary[iTrial] < lower_bound) | (velocity_dictionary[iTrial] > upper_bound)
+                out_of_bounds_indicies = np.where(velocity_condition)[0]
+                if len(out_of_bounds_indicies) >= len(velocity_dictionary[iTrial])/2:
+                    reject_trials_temp.add(trial_num)
+                else:
+                    keep_trials_temp.add(trial_num)
+                trial_num += 1
+            # update drop_trials_set with dropped trial indexes
+            drop_trial_set.update(reject_trials_temp)
+            keep_trial_set.update(keep_trial_set - reject_trials_temp)
+        else:
+            raise TypeError("Wrong type specified for 'trial_reject_bounds_vel' parameter in 'rat_loco_analysis.py'. Need float")
+        print(f"Steps outside of bounds: {drop_trial_set}")
+
+
+    for iTrial in drop_trial_set:
+        # drop out of bounds trials from DataFrame in place, use log10 to get number of decimals for zfilling
+        trialized_anipose_df.drop( 
+            list(trialized_anipose_df.filter(like = \
+                f"_{str(iTrial).zfill(int(1+np.log10(true_step_idx.max())))}")), axis=1, inplace=True)
     
     sliced_steps_diff = np.diff(step_idxs)
     kept_steps_diff = pd.DataFrame(np.array([sliced_steps_diff[iTrial-step_slice.start] for iTrial in (keep_trial_set)]))
@@ -400,7 +438,7 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
     # unpack analysis inputs
     (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
      bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
-     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
+     trial_reject_bounds_sec,trial_reject_bounds_vel,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
      num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()
     # unpack plotting inputs
     (plot_type,plot_units,do_plot,N_colors,plot_template,*_) = CFG['plotting'].values()
@@ -515,3 +553,37 @@ def behavioral_space(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_c
     iplot(fig1)
     iplot(fig2)
     return
+
+#calculates reference bodypart's velocity in xyz axes using diff() function
+def get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmill_speed):
+
+    bodypart_velocity = {}
+    bodypart_velocity[bodypart_for_reference + '_x_vel'] = np.gradient(processed_anipose_df[bodypart_for_reference + '_x']) 
+    bodypart_velocity[bodypart_for_reference + '_y_vel'] = np.add(np.gradient(processed_anipose_df[bodypart_for_reference + '_y']), float(treadmill_speed))
+    bodypart_velocity[bodypart_for_reference + '_z_vel'] = np.gradient(processed_anipose_df[bodypart_for_reference + '_z'])
+   #set_trace()
+   # boundary_applied_indicies = np.where([(bodypart_velocity[bodypart_for_reference + '_y_vel'] > lower_bound) & (bodypart_velocity[bodypart_for_reference + '_y_vel'] < upper_bound)])[1] #currently using np.where to find indicies 
+
+    time = np.arange(len(bodypart_velocity[bodypart_for_reference + '_y_vel']))
+    fig = make_subplots(rows=3, cols=1)
+    fig.append_trace(go.Scatter(x=time, y=np.gradient(np.add(np.gradient(processed_anipose_df[bodypart_for_reference + '_y'], edge_order=1), float(treadmill_speed))), mode='lines', name = "Y Acceleration"), row=1, col=1)
+    #fig.add_trace(go.Scatter(x=time, y=bodypart_velocity[bodypart_for_reference + '_x_vel'], mode='lines', name='X Velocity'))
+    fig.append_trace(go.Scatter(x=time, y=bodypart_velocity[bodypart_for_reference +'_y_vel'], mode='lines', name = "Y Differential"), row=2, col=1)
+    #fig.add_trace(go.Scatter(x=time, y=bodypart_velocity[bodypart_for_reference + '_z_vel'], mode='lines', name='Z Velocity'))
+    fig.append_trace(go.Scatter(x=time, y=processed_anipose_df[bodypart_for_reference + '_y'], mode = 'lines', name='Y Positions'), row=3, col=1)
+    fig.update_xaxes(title_text="Time (ms)")
+    fig.update_yaxes(title_text="Acceleration (mm/ms^2)", row = 1, col = 1)
+    fig.update_yaxes(title_text="Speed (mm/ms)", row = 2, col = 1)
+    fig.update_yaxes(title_text="Position w/ respect to origin(mm)", row = 3, col = 1)
+    
+
+    fig.update_layout(title= bodypart_for_reference + ' Velocity vs Position')
+
+    fig.show()
+
+    bodypart_velocity_df = pd.DataFrame.from_dict(bodypart_velocity)
+    processed_anipose_df = pd.concat([processed_anipose_df, bodypart_velocity_df], axis=1, join='inner')
+   
+    #set_trace()
+
+    return processed_anipose_df

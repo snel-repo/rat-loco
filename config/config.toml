@@ -11,15 +11,17 @@ OE = [
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-06_16-01-57',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-06-08_14-14-30',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-07-15_15-16-47',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/backup_data/2022-11-16_16-19-28'
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-17_17-08-07',
+    # inkblot'/snel/share/data/rodent-ephys/open-ephys/treadmill/mani-pipeline/inkblot/2023-03-23_14-41-46'
 
     ]
 # KiloSort folders below (list of strings)
 # should have the "Record Node ###" folder inside it, and
 # "KilosortResults" in the "recording99" folder
 KS = [
-    "/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/",
+    #'/snel/share/data/rodent-ephys/open-ephys/treadmill/mani-pipeline/inkblot/2023-03-23_14-41-46'
+    "/snel/share/data/rodent-ephys/open-ephys/treadmill/backup_data/2022-11-16_16-19-28/"
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/godzilla/2022-11-16_16-19-28_myo',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/godzilla/2022-11-17_17-08-07_myo',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/pipeline/cleopatra/2022-07-15_15-16-47_myo/'
@@ -37,6 +39,7 @@ anipose = [
     # '/snel/share/data/anipose/session20221220_128test/',
     # '/snel/share/data/anipose/session20230106_128test2/'
     '/snel/share/data/anipose/session20230209_godzilla_vids/'
+    #'/snel/share/data/anipose/session20230627_inkblot_vids'
 ]
 
 [rat]
@@ -68,19 +71,29 @@ treadmill_incline = [0, 0, 0, 0, 0]
 camera_fps = 125 #125 FPS
 vid_length = 60 #30/60 seconds
 
+[rat.inkblot]
+bodyparts_list = ['palm_L_y','palm_L_z']#,'palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodypart_for_alignment = ['palm_L_y']
+session_date = ['20230323-2','20230323-5','20230323-10','20230323-11','20230323-9','20230323-12'] 
+treadmill_speed = [12,18,12,12,12,18]
+treadmill_incline = [0,0,10,10,20,20]
+camera_fps = 125 #125 FPS
+vid_length = 60 #30/60 seconds
+
 [analysis]
-MU_spike_amplitudes_list = [[30,200],[200.0001,500],[500.0001,800],[800.0001,1100],[1100.0001,2000]]
-ephys_channel_idxs_list = [2,9,12] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
+MU_spike_amplitudes_list = [[30,200],[200.0001,500.0],[500.0001,800.0],[800.0001,1100.0],[1100.0001,2000.0]]
+ephys_channel_idxs_list = [1,3,5,10,14] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
 filter_ephys = 'notch' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 350-7000Hz
 sort_method = 'kilosort' # 'kilosort'/'thresholding'
 bodypart_for_reference = 'tailbase' # choose bodypart to use as origin, without _x/_y/_z suffix, plug into origin_offsets as a value to subtract for that coordinate
 bodypart_ref_filter =  2 #Hz, Boolean/int Example: (False to disable filtering of bodypart_for_reference, 2 for 2Hz cutoff lowpass)
 filter_all_anipose = false # 'highpass' | 'lowpass' | 'bandpass' | 'median' | or Boolean false/0 # highpass is 0.5Hz, lowpass is 30Hz, bandpass is 0.5-30Hz
 trial_reject_bounds_mm = false # [[-25,25],[-25,25]] #mm, Boolean/Integer/2D List, rejects trials outside bounds of the trial average at each bodypart's alignment timepoint. Examples: Boolean / 40 / [[10,40],[-10,25]] for peak, trough values
-trial_reject_bounds_sec = [0.2,1] # [0.4,0.7] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
-origin_offsets = {x=-18,y='tailbase',z=135} # Values recorded from origin to treadmill bounds, bodypart string, or use zeroes for no offset. If bodypart_for_reference is set for one coordinate, it overrides setting and will subtract for that coordinate. Examples: [-18,211,135]/[-87,211,135]/[52,-310,0]/['nose','tailbase',135], can be disbaled with disabled with 0
+trial_reject_bounds_sec = [0.2,1] #prev: [0.2,1] # [0.4,0.7] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
+trial_reject_bounds_vel = false # [4.9, 5.1] #mm/sec, range of velocities outside of which trials get rejected. Examples: [9.5, 10.5] or [4, 6]
+origin_offsets = {x=-18,y='tailbase',z=135} # Values recorded from origin to treadmill bounds, bodypart string, or use zeroes for no offset. ßIf bodypart_for_reference is set for one coordinate, it overrides setting and will subtract for that coordinate. Examples: [-18,211,135]/[-87,211,135]/[52,-310,0]/['nose','tailbase',135], can be disbaled with disabled with 0
 save_binned_MU_data = 0 # set Boolean
-time_frame = [0,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
+time_frame = [0,0.5] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
 bin_width_ms = 10
 num_rad_bins = 89
 smoothing_window = [10,10,10,10,10] # bins
@@ -90,9 +103,9 @@ export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "multi_bin" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
+plot_type = "sort" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
 plot_units =  [4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
-do_plot = 0 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
+do_plot = 1 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
 N_colors = 10 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
 plot_template = 'plotly_white'
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',

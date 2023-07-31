@@ -138,7 +138,8 @@ def load_anipose_data(chosen_rat, CFG, session_iterator):
 def load_KS_data(chosen_rat, CFG, session_iterator): 
     session_IDs_dict = {} # stores .info Session IDs of each recording in order under directory keys 
     data_dir_list = CFG['data_dirs']['KS']
-    session_iterator_copy = session_iterator.copy()
+    sort_to_use = CFG['analysis']['sort_to_use']
+    session_iterator_copy = session_iterator.copy() # copy to avoid modifying original list
     for data_dir in data_dir_list:
         recording_lengths_arr_list = []
         num_channels_list = []
@@ -153,7 +154,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         for iRec in range((len(session.recordnodes[0].recordings))): # loops through all individual recording folders
             # skip recording99
             if 'recording99' in session.recordnodes[0].recordings[iRec].directory:
-                continue
+                continue # skip recording99
             timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Acquisition_Board-100.Rhythm Data/timestamps.npy"
             if not os.path.exists(timestamps_file):
                 timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Rhythm_FPGA-100.0/timestamps.npy"
@@ -191,33 +192,39 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         if not os.path.exists(concatenated_data_dir):
             concatenated_data_dir = session.recordnodes[0].recordings[-1].directory # folder which contains all session data combined
         print(f"Using {concatenated_data_dir} folder.")
-        if "sorted0" in os.listdir(data_dir):
-            kilosort_files = []
-            kilosort_folder = os.path.join(data_dir,"sorted0")
-            if "custom_merges" in os.listdir(kilosort_folder):
-                # grab final merge output
-                kilosort_files.append(os.path.join(kilosort_folder, "custom_merges/final_merge/custom_merge.mat"))
-            else:
-                # grab raw KS output
-                kilosort_files.append(os.path.join(kilosort_folder, "spike_clusters.npy"))
-                kilosort_files.append(os.path.join(kilosort_folder, "spike_times.npy"))
-                if len(kilosort_files) != 2:
-                    print("KiloSort Spike Times and/or Spike Clusters not found!")
-                    return
-        elif "KilosortResults" in os.listdir(concatenated_data_dir):
-            kilosort_files = []
-            kilosort_folder = concatenated_data_dir + "/KilosortResults"
-            for root, dirs, files in os.walk(kilosort_folder):
-                if "spike_clusters.npy" in files and "spike_times.npy" in files:
-                    kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
-                    kilosort_files.append(os.path.join(root, "spike_times.npy"))
-                    if len(kilosort_files) != 2:
-                        print("KiloSort Spike Times and/or Spike Clusters not found!")
-                        return
+        kilosort_files = []
+        if "sorted0" in os.listdir(data_dir) and (sort_to_use == "latest" or sort_to_use == -1):
+            sort_folder_name = "sorted0"
+        elif "best_sort" in os.listdir(data_dir) and sort_to_use == "best":
+            sort_folder_name = "best_sort"
         else:
-            print("No folder named 'KilosortResults' in " + concatenated_data_dir + " or sorted0 folder with custom_merge.mat")
-            print("If above error statement does not contain 'recording99' please make a folder with same name which contains Kilosort Results folder")
+            print("No folder named 'sorted0' or symlink called 'best_sort' in " + data_dir)
             raise FileNotFoundError()
+        
+        kilosort_folder = os.path.join(data_dir,sort_folder_name)
+        if "custom_merges" in os.listdir(kilosort_folder):
+            # grab final merge output
+            kilosort_files.append(os.path.join(kilosort_folder, "custom_merges/final_merge/custom_merge.mat"))
+        else:
+            # grab raw KS output
+            kilosort_files.append(os.path.join(kilosort_folder, "spike_clusters.npy"))
+            kilosort_files.append(os.path.join(kilosort_folder, "spike_times.npy"))
+            if len(kilosort_files) != 2:
+                print("KiloSort Spike Times and/or Spike Clusters not found!")
+                return    
+        # elif "KilosortResults" in os.listdir(concatenated_data_dir):
+        #     kilosort_folder = os.path.join(concatenated_data_dir,"KilosortResults")
+        #     for root, dirs, files in os.walk(kilosort_folder):
+        #         if "spike_clusters.npy" in files and "spike_times.npy" in files:
+        #             kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
+        #             kilosort_files.append(os.path.join(root, "spike_times.npy"))
+        #             if len(kilosort_files) != 2:
+        #                 print("KiloSort Spike Times and/or Spike Clusters not found!")
+        #                 return
+        # else:
+        #     print("No folder named 'KilosortResults' in " + concatenated_data_dir + " or sorted0 folder with custom_merge.mat")
+        #     print("If above error statement does not contain 'recording99' please make a folder with same name which contains Kilosort Results folder")
+        #     raise FileNotFoundError()
         if ".npy" in kilosort_files[0]:
             spikeClusters_arr = np.load(kilosort_files[0]).ravel()
             spikeTimes_arr = np.load(kilosort_files[1]).ravel()

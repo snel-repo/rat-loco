@@ -18,7 +18,7 @@ def multijoin_bin_and_count(
     
     ### Unpack CFG Inputs
     # unpack analysis inputs
-    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+    (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,sort_to_use,
     bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
     trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
     num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()

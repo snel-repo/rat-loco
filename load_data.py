@@ -1,28 +1,72 @@
 import os
+import sys
+import pathlib
+import traceback
 import errno
 import scipy.io
 import numpy as np
 import pandas as pd
 from open_ephys.analysis import Session
 
+def _validate_data_dir_input(data_dir, sort_to_use):
+    if "sorted0" in os.listdir(data_dir) and (sort_to_use == "latest"):
+        sort_folder_name = "sorted0"
+    elif "best_sort" in os.listdir(data_dir) and sort_to_use == "best":
+        sort_folder_name = "best_sort"
+    else:
+        if sort_to_use == "latest":
+            print("No folder named 'sorted0' in " + data_dir)
+        elif sort_to_use == "best":    
+            print("No symlink called 'best_sort' in " + data_dir)
+        else:
+            try:
+                # ensure that the user inputted a valid timestamp
+                _ = int(sort_to_use)
+                if (len(sort_to_use) != 15) or (sort_to_use[8] != "_"):
+                    raise ValueError
+                for iFile in os.listdir(data_dir):
+                    if sort_to_use in iFile:
+                        sort_folder_name = iFile
+                        break
+                else:
+                    raise FileNotFoundError
+            except ValueError:
+                traceback.print_exc()
+                print("ValueError: sort_to_use must be either 'latest', 'best', or a 'YYYYMMDD_HHMMSS' timestamp.")
+                sys.exit(1)
+            except FileNotFoundError:
+                traceback.print_exc()
+                print("FileNotFoundError: No folder named " + sort_to_use + " in " + data_dir)
+                sys.exit(1)
+            except:
+                traceback.print_exc()
+                print("Unexpected error")
+                sys.exit(1)
+        return sort_folder_name
+
 def load_OE_data(chosen_rat, CFG, session_iterator):
     ## Outputs all extracted continuous ephys data packed in a dictionary and the keys are unique session identifiers
     
     # initialize lists and counter variable(s)
-    directory_list = CFG['data_dirs']['OE']
+    data_dir_list = CFG['data_dirs']['OE']
+    sort_to_use = CFG['analysis']['sort_to_use']
     number_of_recordings_per_session_list = []  # stores number of recordings found in each directory
     continuous_ephys_data_list = []             # stores continuous data
-    list_of_session_IDs = [] # stores unique session identifiers
+    list_of_session_IDs = []                    # stores unique session identifiers
     iChosenRec = int(-1)                        # counts the number of recordings per directory
 
-    for iSessionPath in directory_list: # loop through all paths provided
-        session = Session(iSessionPath) # use OE library to extract data from path into a structured python format
+    for data_dir in data_dir_list: # loop through all paths provided
+        session = Session(data_dir) # use OE library to extract data from path into a structured python format
         number_of_recordings_per_session_list.append((len(session.recordnodes[0].recordings))) # store number of recordings to allow next looping operation
-
+        
+        sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
+        ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name,"ops.mat"))
+        ops = scipy.io.loadmat(ops_path)
+        recordings_to_use = ops['recordings']
+        
         for iRec in range(number_of_recordings_per_session_list[-1]):
-            # skip recording99
-            if 'recording99' in session.recordnodes[0].recordings[iRec].directory:
-                continue
+            if session.recordnodes[0].recordings[iRec].directory.split('recording')[-1] in [str(rec) for rec in recordings_to_use]:
+                continue # skips recording if it is not in recordings_to_use
             file_list = os.listdir(session.recordnodes[0].recordings[iRec].directory)
             chosen_recording = 0
             for filename in file_list:
@@ -83,7 +127,7 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
 
 def load_anipose_data(chosen_rat, CFG, session_iterator):
     ## Input all desired data paths as a list to extract anipose data from 
-    # directory_list = [
+    # data_dir_list = [
     #     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220603',
     #     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220606',
     #     '/home/sean/hdd/GTE-BME/SNEL/data/anipose/session220608']
@@ -106,7 +150,7 @@ def load_anipose_data(chosen_rat, CFG, session_iterator):
             for filename in file_list:
                 if filename.endswith(".csv"):
                     if filename.__contains__(session_ID):
-                        with open(os.path.join(directory_name, filename), "r") as csv_file:
+                        with open(str(pathlib.PurePath(directory_name).joinpath(filename)), "r") as csv_file:
                             yield _read_pose_3d_data(csv_file)
                         break
     
@@ -114,14 +158,14 @@ def load_anipose_data(chosen_rat, CFG, session_iterator):
     # date_list = []                  # stores dates of each session
     list_of_session_IDs = []        # stores unique session identifiers
     list_of_pose_3d_dataframes = [] # stores all dataframes
-    directory_list = CFG['data_dirs']['anipose']
+    data_dir_list = CFG['data_dirs']['anipose']
     session_iterator_copy = session_iterator.copy()
-    for directory_path in directory_list:
-        pose_3d_path = os.path.join(directory_path,"pose-3d/")
-        # if directory_list[iDir][-1] != os.path.sep:   
-        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-1] # extract the last foldername
+    for directory_path in data_dir_list:
+        pose_3d_path = str(pathlib.PurePath(directory_path).joinpath("pose-3d/"))
+        # if data_dir_list[iDir][-1] != os.path.sep:   
+        #     session_folder_name = data_dir_list[iDir].split(os.path.sep)[-1] # extract the last foldername
         # else:
-        #     session_folder_name = directory_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
+        #     session_folder_name = data_dir_list[iDir].split(os.path.sep)[-2] # extract the last foldername (ignoring front slash)
         # session_date = session_folder_name[-6:] # extract the date from folder name
         # date_list.append(session_date)
         file_list = os.listdir(pose_3d_path)
@@ -151,10 +195,15 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         session = Session(data_dir) # copy over structure.oebin from recording folder to recording99 folder or errors 
         clusterIDs_ephys_spikeTimes = {}
         cluster_id_ephys_data_dict = {}
+        
+        sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
+        ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name,"ops.mat"))
+        ops = scipy.io.loadmat(ops_path)
+        recordings_to_use = ops['recordings']
+        
         for iRec in range((len(session.recordnodes[0].recordings))): # loops through all individual recording folders
-            # skip recording99
-            if 'recording99' in session.recordnodes[0].recordings[iRec].directory:
-                continue # skip recording99
+            if session.recordnodes[0].recordings[iRec].directory.split('recording')[-1] in [str(rec) for rec in recordings_to_use]:
+                continue # skips recording if it is not in recordings_to_use
             timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Acquisition_Board-100.Rhythm Data/timestamps.npy"
             if not os.path.exists(timestamps_file):
                 timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Rhythm_FPGA-100.0/timestamps.npy"
@@ -188,43 +237,22 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
         recording_lengths_arr = np.array(recording_lengths_arr_list)/np.array(num_channels_list)
-        concatenated_data_dir = os.path.abspath(os.path.join(session.recordnodes[0].recordings[-1].directory, os.pardir,'concatenated_data'))
-        if not os.path.exists(concatenated_data_dir):
-            concatenated_data_dir = session.recordnodes[0].recordings[-1].directory # folder which contains all session data combined
-        print(f"Using {concatenated_data_dir} folder.")
+        # concatenated_data_dir = str(pathlib.PurePath(session.recordnodes[0].recordings[-1].directory).parent.joinpath('concatenated_data'))
+        # if not pathlib.Path.exists(pathlib.Path(concatenated_data_dir)):
+        #     raise FileNotFoundError("concatenated_data folder not found in " + str(pathlib.PurePath(session.recordnodes[0].recordings[-1].directory).parent))
+        # print(f"Using {concatenated_data_dir} folder.")
         kilosort_files = []
-        if "sorted0" in os.listdir(data_dir) and (sort_to_use == "latest" or sort_to_use == -1):
-            sort_folder_name = "sorted0"
-        elif "best_sort" in os.listdir(data_dir) and sort_to_use == "best":
-            sort_folder_name = "best_sort"
-        else:
-            print("No folder named 'sorted0' or symlink called 'best_sort' in " + data_dir)
-            raise FileNotFoundError()
-        
-        kilosort_folder = os.path.join(data_dir,sort_folder_name)
+        kilosort_folder = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name))
         if "custom_merges" in os.listdir(kilosort_folder):
             # grab final merge output
-            kilosort_files.append(os.path.join(kilosort_folder, "custom_merges/final_merge/custom_merge.mat"))
+            kilosort_files.append(str(pathlib.PurePath(kilosort_folder).joinpath( "custom_merges/final_merge/custom_merge.mat")))
         else:
             # grab raw KS output
-            kilosort_files.append(os.path.join(kilosort_folder, "spike_clusters.npy"))
-            kilosort_files.append(os.path.join(kilosort_folder, "spike_times.npy"))
+            kilosort_files.append(str(pathlib.PurePath(kilosort_folder).joinpath( "spike_clusters.npy")))
+            kilosort_files.append(str(pathlib.PurePath(kilosort_folder).joinpath( "spike_times.npy")))
             if len(kilosort_files) != 2:
                 print("KiloSort Spike Times and/or Spike Clusters not found!")
                 return    
-        # elif "KilosortResults" in os.listdir(concatenated_data_dir):
-        #     kilosort_folder = os.path.join(concatenated_data_dir,"KilosortResults")
-        #     for root, dirs, files in os.walk(kilosort_folder):
-        #         if "spike_clusters.npy" in files and "spike_times.npy" in files:
-        #             kilosort_files.append(os.path.join(root, "spike_clusters.npy"))
-        #             kilosort_files.append(os.path.join(root, "spike_times.npy"))
-        #             if len(kilosort_files) != 2:
-        #                 print("KiloSort Spike Times and/or Spike Clusters not found!")
-        #                 return
-        # else:
-        #     print("No folder named 'KilosortResults' in " + concatenated_data_dir + " or sorted0 folder with custom_merge.mat")
-        #     print("If above error statement does not contain 'recording99' please make a folder with same name which contains Kilosort Results folder")
-        #     raise FileNotFoundError()
         if ".npy" in kilosort_files[0]:
             spikeClusters_arr = np.load(kilosort_files[0]).ravel()
             spikeTimes_arr = np.load(kilosort_files[1]).ravel()

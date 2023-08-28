@@ -1,7 +1,7 @@
 import sys
 import os
 import time
-import process_frames.allframes2vid as allframes2vid
+import allframes2vid
 # from pdb import set_trace
 
 def allsessionframes2vid(num_frames, date='auto', downsampling_factor=1, destination='.', framerate=125, num_cams=4):

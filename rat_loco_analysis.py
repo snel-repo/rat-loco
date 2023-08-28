@@ -4,9 +4,8 @@ from collections import deque
 from config import config as CFG
 
 ### Chosen Rat ###
-chosen_rat = 'godzilla' # <-- Choose Rat HERE
-chosen_session = 2 # <-- Choose Session HERE. # From session_date list, provide an index. 
-                                              # This only applies to single-session analyses
+chosen_rat = CFG['chosen_rat']
+chosen_session = CFG['chosen_session']
 
 ### Process Chosen Plotting Parameters
 # black to grey
@@ -75,7 +74,7 @@ def rat_loco_analysis(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_
             from process_spikes import bin_and_count
             ### Unpack CFG Inputs
             # unpack analysis inputs
-            (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method,
+            (MU_spike_amplitudes_list,ephys_channel_idxs_list,filter_ephys,sort_method, sort_to_use,
             bodypart_for_reference,bodypart_ref_filter,filter_all_anipose,trial_reject_bounds_mm,
             trial_reject_bounds_sec,origin_offsets,save_binned_MU_data,time_frame,bin_width_ms,
             num_rad_bins,smoothing_window,phase_align,align_to,export_data) = CFG['analysis'].values()

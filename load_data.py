@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from open_ephys.analysis import Session
 
-def _validate_data_dir_input(data_dir, sort_to_use):
+def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
     if "sorted0" in os.listdir(data_dir) and (sort_to_use == "latest"):
         sort_folder_name = "sorted0"
     elif "best_sort" in os.listdir(data_dir) and sort_to_use == "best":
@@ -42,7 +42,7 @@ def _validate_data_dir_input(data_dir, sort_to_use):
                 traceback.print_exc()
                 print("Unexpected error")
                 sys.exit(1)
-        return sort_folder_name
+    return sort_folder_name
 
 def load_OE_data(chosen_rat, CFG, session_iterator):
     ## Outputs all extracted continuous ephys data packed in a dictionary and the keys are unique session identifiers

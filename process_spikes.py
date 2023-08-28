@@ -469,6 +469,7 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
 
     if do_plot==3:
         fig.write_html(f"/home/sean/Downloads/{session_ID}.html")#_{str(ephys_channel_idxs_list)}.html")
+        plot_flag = False
     if plot_flag:
         iplot(fig)
     if export_data:

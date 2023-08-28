@@ -582,7 +582,7 @@ def get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmil
 
     fig.update_layout(title= bodypart_for_reference + ' Velocity vs Position')
 
-    fig.show()
+    # fig.show()
 
     bodypart_velocity_df = pd.DataFrame.from_dict(bodypart_velocity)
     processed_anipose_df = pd.concat([processed_anipose_df, bodypart_velocity_df], axis=1, join='inner')

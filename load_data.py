@@ -94,7 +94,6 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
                     # This converts from 16-bit number to uV for continuous channels and V for ADC channels
                     continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel] = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]*session.recordnodes[0].recordings[iRec].info['continuous'][0]['channels'][iChannel]['bit_volts']
                 continuous_ephys_data_list[iChosenRec][0].samples = np.array(continuous_ephys_data_list[iChosenRec][0].samples,dtype='float32')
-                # set_trace()
     ## section plots the SYNC channel and describes stats of intervals            
     # signal = continuous_ephys_data_list[iChosenRec][0].samples[:,iChannel]
     # fsignal = iir_notch(signal, 30000)
@@ -191,7 +190,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         spikeTimes_arr = []
         clusterIDs = []
         session_IDs_temp = []
-        chosen_rec_idxs_list = []
+        # chosen_rec_idxs_list = []
         session = Session(data_dir) # copy over structure.oebin from recording folder to recording99 folder or errors 
         clusterIDs_ephys_spikeTimes = {}
         cluster_id_ephys_data_dict = {}
@@ -199,10 +198,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
         ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name,"ops.mat"))
         ops = scipy.io.loadmat(ops_path)
-        recordings_to_use = ops['recordings']
-        
+        recordings_to_use = ops['recordings'][0] # subtract 1 to match python indexing
         for iRec in range((len(session.recordnodes[0].recordings))): # loops through all individual recording folders
-            if session.recordnodes[0].recordings[iRec].directory.split('recording')[-1] in [str(rec) for rec in recordings_to_use]:
+            if session.recordnodes[0].recordings[iRec].directory.split('recording')[-1] not in [str(rec) for rec in recordings_to_use]:
                 continue # skips recording if it is not in recordings_to_use
             timestamps_file = session.recordnodes[0].recordings[iRec].directory + "/continuous/Acquisition_Board-100.Rhythm Data/timestamps.npy"
             if not os.path.exists(timestamps_file):
@@ -221,7 +219,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                     session_ID_CFG = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
                     if session_ID.__contains__(session_ID_CFG):
                         session_IDs_temp.append(session_ID.split('.')[0])
-                        chosen_rec_idxs_list.append(iRec)
+                        # chosen_rec_idxs_list.append(iRec)
                         # remove the index value after a match so you don't waste search loops in the future
                         session_iterator_copy.remove(iterator)
                         break
@@ -237,6 +235,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
         recording_lengths_arr = np.array(recording_lengths_arr_list)/np.array(num_channels_list)
+        assert all(recording_lengths_arr.astype(int) == recording_lengths_arr), "Recording lengths not divisible by number of channels!"
         # concatenated_data_dir = str(pathlib.PurePath(session.recordnodes[0].recordings[-1].directory).parent.joinpath('concatenated_data'))
         # if not pathlib.Path.exists(pathlib.Path(concatenated_data_dir)):
         #     raise FileNotFoundError("concatenated_data folder not found in " + str(pathlib.PurePath(session.recordnodes[0].recordings[-1].directory).parent))
@@ -270,7 +269,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         # take cumsum to use later for recording file index boundaries
         recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(),0,0).astype(int)
         cluster_id_ephys_data_dict = dict.fromkeys(tuple(*session_IDs_dict.values()))
-        for (session_ID, iChosen) in zip(session_IDs_dict[data_dir],chosen_rec_idxs_list):
+        for (iChosen, session_ID) in enumerate(session_IDs_dict[data_dir]):
             clusterIDs_ephys_spikeTimes = clusterIDs_ephys_spikeTimes.copy()
             for id in clusterIDs:
                 clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[np.where(spikeClusters_arr==id)]
@@ -279,8 +278,6 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                     np.where((clusterIDs_ephys_spikeTimes_id_all>recording_len_cumsum[iChosen]) &
                              (clusterIDs_ephys_spikeTimes_id_all<recording_len_cumsum[iChosen+1]))] - recording_len_cumsum[iChosen]
             cluster_id_ephys_data_dict[session_ID] = clusterIDs_ephys_spikeTimes
-        print("Loaded KiloSort files:  ", cluster_id_ephys_data_dict.keys())
-                
-        ## NEED TO USE RECORDING LENGTH ARRAY TO DIVIDE UP CONCATENATED DATA INTO SESSIONS
-        ## THEN MAKE DICTIONARY IN FORM OF SESSIONID -> CLUSTERID -> SPIKETIMES ARRAY (WITH RESPECT TO LENGTHS OF EACH RECORDING)
+            import pdb; pdb.set_trace()
+        print("Loaded KiloSort files:  ", cluster_id_ephys_data_dict.keys())    
     return cluster_id_ephys_data_dict

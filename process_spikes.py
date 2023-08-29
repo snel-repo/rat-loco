@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from scipy.signal import find_peaks, butter, filtfilt, iirnotch
 from scipy.ndimage import gaussian_filter1d
 from inspect import stack
+from pathlib import Path
 # from pdb import set_trace
 # from sklearn.decomposition import PCA
 # from sklearn.model_selection import train_test_split
@@ -76,7 +77,6 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     # extract data from dictionaries
     
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
-    #set_trace()
     chosen_anipose_df = anipose_dict[session_ID]
 
     # create time axes
@@ -191,6 +191,8 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         assert len(MU_spikes_dict)==len(plot_units), \
             ("Selected MU key could be missing from input KS dictionary, "
              "check IDs in Phy, or try indexing from 1 in config.toml: [plotting]: plot_units.")
+    else:
+        raise ValueError("sort_method must be either 'kilosort' or 'thresholding'.")
     
     # MU_spike_idxs = np.array(MU_spike_idxs,dtype=object).squeeze().tolist()
     
@@ -221,10 +223,11 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
         row_spec_list[len(bodyparts_list)+len(ephys_channel_idxs_list)] = \
             [{'rowspan':1}] #len(MU_spikes_dict)//6+1}]
 
-    if sort_method=="kilosort":
-        MU_labels = list(KS_dict.keys())[iterator]
-    elif sort_method=="thresholding":
-        MU_labels = list(OE_dict.keys())[iterator]
+    # if sort_method=="kilosort":
+    #     KS_iterator = OE_dict.keys().index(iterator)
+    #     MU_labels = list(KS_dict.keys())[iterator]
+    # elif sort_method=="thresholding":
+    MU_labels = list(OE_dict.keys())[iterator]
         
     fig = make_subplots(
         rows=number_of_rows, cols=1,
@@ -468,7 +471,8 @@ def sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, 
     figs = [fig]
 
     if do_plot==3:
-        fig.write_html(f"/home/sean/Downloads/{session_ID}.html")#_{str(ephys_channel_idxs_list)}.html")
+        path_to_write_to = Path.cwd().joinpath(session_ID+'.html')
+        fig.write_html(str(path_to_write_to))
         plot_flag = False
     if plot_flag:
         iplot(fig)

@@ -1,0 +1,10 @@
+# environment.yaml
+
+name: rat-loco
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pip
+  - pip:
+    - -r requirements.txt

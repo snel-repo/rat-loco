@@ -278,6 +278,5 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                     np.where((clusterIDs_ephys_spikeTimes_id_all>recording_len_cumsum[iChosen]) &
                              (clusterIDs_ephys_spikeTimes_id_all<recording_len_cumsum[iChosen+1]))] - recording_len_cumsum[iChosen]
             cluster_id_ephys_data_dict[session_ID] = clusterIDs_ephys_spikeTimes
-            import pdb; pdb.set_trace()
         print("Loaded KiloSort files:  ", cluster_id_ephys_data_dict.keys())    
     return cluster_id_ephys_data_dict

@@ -1,6 +1,6 @@
 import sys
 import os
-import process_frames.stackvids as stackvids
+import stackvids
 
 
 def stackallvids(stack_type='xstack', destination='.', num_cams=4):

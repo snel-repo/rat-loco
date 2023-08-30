@@ -6,5 +6,6 @@ channels:
 dependencies:
   - python
   - pip
+  - ffmpeg
   - pip:
     - -r requirements.txt

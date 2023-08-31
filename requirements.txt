@@ -29,6 +29,7 @@ ipython
 jedi
 Jinja2
 joblib
+kaleido
 kiwisolver
 llvmlite
 locket

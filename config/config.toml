@@ -3,7 +3,7 @@ title = "Directory, Rat, Analysis, and Plotting Configurations"
 
 # Choose rat and session here (this only applies to single-session analyses)
 chosen_rat = 'godzilla' # 'cleopatra' | 'dogerat' | 'godzilla' | 'inkblot' | 'kitkat'
-chosen_session = 2 # integer index of session_date list in rat config
+chosen_sessions = [0,2] # integer index of session_date list in rat config
 
 [data_dirs]
 # OpenEphys folders below (list of strings)
@@ -35,7 +35,8 @@ anipose = [
     # '/snel/share/data/anipose/session20230106_128test2/'
     # '/snel/share/data/anipose/session20230209_godzilla_vids/'
     #'/snel/share/data/anipose/session20230627_inkblot_vids',
-    '/snel/share/data/anipose/analysis20230823_all_rat_vids/'
+    '/snel/share/data/anipose/analysis20230823_all_rat_vids/',
+    '/snel/share/data/anipose/analysis20230830_godzilla',
 ]
 
 [rat]
@@ -98,7 +99,7 @@ MU_spike_amplitudes_list = [[30,200],[200.0001,500],[500.0001,800],[800.0001,110
 ephys_channel_idxs_list = [1,2,5,10,11,12]#,4,5,12,13,14,15]#[2,4,10,12,13,14,15]#[2,4]#[10,12]#[13,14,15] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
 filter_ephys = 'notch' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 350-7000Hz
 sort_method = 'kilosort' # 'kilosort'/'thresholding'
-sort_to_use = '20230829_150649' # 'latest' | 'best' | 'YYYYMMDD_HHMMSS' # 'latest' is the latest sort, 'best' is the best sort, or a specific date-time string
+sort_to_use = '20230829_184318' # 'latest' | 'best' | 'YYYYMMDD_HHMMSS' # 'latest' is the latest sort, 'best' is the best sort, or a specific date-time string
 bodypart_for_reference = 'tailbase' # choose bodypart to use as origin, without _x/_y/_z suffix, plug into origin_offsets as a value to subtract for that coordinate
 bodypart_ref_filter =  2 #Hz, Boolean/int Example: (False to disable filtering of bodypart_for_reference, 2 for 2Hz cutoff lowpass)
 filter_all_anipose = false # 'highpass' | 'lowpass' | 'bandpass' | 'median' | or Boolean false/0 # highpass is 0.5Hz, lowpass is 30Hz, bandpass is 0.5-30Hz
@@ -111,15 +112,15 @@ time_frame = [0,0.5] # 2-element list slicing between 0 and 1, e.g., [0,.5], set
 bin_width_ms = 10
 num_rad_bins = 100
 smoothing_window = [10,10,10,10,10] # bins
-phase_align = false # set Boolean, pertains to process_spikes.smooth() and process_spikes.state_space()
+phase_align = false # set Boolean, affects process_spikes.smoothed() and process_spikes.state_space()
 align_to = 'foot off' # "foot strike"/"foot off"
 export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "sort" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
-plot_units =  [11,2,6,3,7]#[4,5,0,1,2,8,3]#[10,14,2,5,12]#[27,26,8,15,23,18]#[12,3,5,17,15,16]#[14,6,24,10,15,47,18,7]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
-do_plot = 3 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain, set 3 to write plots to html instead (where implemented)
+plot_type = "multijoin_bin_and_count" # sort | bin_and_count | raster | smoothed | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
+plot_units =  [5,8,2,6,10,7]#[4,5,0,1,2,8,3]#[10,14,2,5,12]#[27,26,8,15,23,18]#[12,3,5,17,15,16]#[14,6,24,10,15,47,18,7]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
+do_plot = 3 # set integer, how to generate plots, 0 is false, 1 is true, set 2 for all plots in rat-loco function chain, set 3 to write plots to html instead (where implemented)
 N_colors = 8 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
 plot_template = 'plotly_white'
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',

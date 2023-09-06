@@ -10,6 +10,7 @@ chosen_sessions = [0,2] # integer index of session_date list in rat config
 # should have the "Record Node ###" folder inside it
 OE = [
     '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
     ]
 # KiloSort folders below (list of strings)
@@ -18,6 +19,7 @@ OE = [
 # or a "best_sort" symlink to the best sort folder you want to use
 KS = [
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/cleopatra/2022-07-15_15-16-47_myo/'
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28',
     '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28',
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
     ]

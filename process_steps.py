@@ -242,8 +242,46 @@ def peak_align_and_filt(
         distance=30,
         prominence=None,
         width=10,
-        wlen=None,
-    )
+        wlen=None
+        )
+    
+    min_length = min(len(foot_strike_idxs),len(foot_off_idxs))
+    #Creates 
+    foot_off_arr = np.array([[np.ones(min_length,dtype=int)*-1], [foot_off_idxs]])
+    foot_strike_arr = np.array([[np.ones(min_length,dtype=int)*1], [foot_strike_idxs]])
+
+    weaved_strikes_offs = np.empty([2,min_length*2], dtype=int) 
+   
+    for i,j in zip(range(min_length),range(0,min_length*2,2)):
+        weaved_strikes_offs[0][j] = foot_off_arr[0][0][i]
+        weaved_strikes_offs[1][j] = foot_off_arr[1][0][i]
+        weaved_strikes_offs[0][j+1] = foot_strike_arr[0][0][i]
+        weaved_strikes_offs[1][j+1] = foot_strike_arr[1][0][i]
+
+    sorted_idxs = np.argsort(weaved_strikes_offs[1])
+    weaved_strikes_offs[0] = weaved_strikes_offs[0][sorted_idxs]
+    weaved_strikes_offs[1] = weaved_strikes_offs[1][sorted_idxs]
+    
+    idxs_to_remove = []
+    for i in range(len(weaved_strikes_offs[0])-1):
+        if weaved_strikes_offs[0][i] == weaved_strikes_offs[0][i+1]:
+            #change this to 1) see if it is a strike or a off, 2) keep lowest if off, keep highest if strike
+            #max value of kinematics
+            if np.abs(time_axis_for_anipose[weaved_strikes_offs[1][i]]) > np.abs(time_axis_for_anipose[weaved_strikes_offs[1][i+1]]):
+                idxs_to_remove.append(i+1) #might have to change this to account for valleys vs peaks 
+            else:
+                idxs_to_remove.append(i)
+    #set_trace()
+    cleaned_strikes_offs = np.delete(weaved_strikes_offs[1], idxs_to_remove, axis=0)
+
+    if foot_off_idxs[0] < foot_strike_idxs[0]:
+        foot_off_idxs = cleaned_strikes_offs[::2]
+        foot_strike_idxs = cleaned_strikes_offs[1::2]
+    else:
+        foot_strike_idxs = cleaned_strikes_offs[::2]
+        foot_off_idxs = cleaned_strikes_offs[1::2]
+
+    #set_trace()
 
     # index off outermost steps, to skip noisy initial tracking
     # foot_strike_idxs=foot_strike_idxs[1:-1]
@@ -868,7 +906,7 @@ def get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmil
 
     fig.update_layout(title=bodypart_for_reference + " Velocity vs Position")
 
-    # fig.show()
+    # #fig.show()
 
     bodypart_velocity_df = pd.DataFrame.from_dict(bodypart_velocity)
     processed_anipose_df = pd.concat(

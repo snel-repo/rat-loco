@@ -124,7 +124,6 @@ def sort(
         )
 
     # extract data from dictionaries
-
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
     chosen_anipose_df = anipose_dict[session_ID]
 
@@ -134,6 +133,18 @@ def sort(
         np.arange(round(len(chosen_ephys_data_continuous_obj.samples)))
         / ephys_sample_rate
     )
+    # filter ephys data
+    for channel_number in ephys_channel_idxs_list:
+        if channel_number not in [-1, 16]:
+            ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[:, channel_number]
+        if filter_ephys == "notch" or filter_ephys == "both":
+            ephys_data_for_channel = iir_notch(ephys_data_for_channel, ephys_sample_rate)
+        if filter_ephys == "bandpass" or filter_ephys == "both":
+            # 300-5000Hz band
+            ephys_data_for_channel = butter_bandpass_filter(
+                ephys_data_for_channel, 300.0, 5000.0, ephys_sample_rate
+            )
+        chosen_ephys_data_continuous_obj.samples[:, channel_number] = ephys_data_for_channel
     # find the beginning of the camera SYNC pulse
     filtered_sync_channel = butter_highpass_filter(
         data=chosen_ephys_data_continuous_obj.samples[:, 16],
@@ -246,18 +257,18 @@ def sort(
             )  # init empty list for each channel to hold next sorted spike idxs
             for iAmplitudes in MU_spike_amplitudes_list:
                 if channel_number not in [-1, 16]:
-                    ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[
-                        slice_for_ephys_during_video, channel_number
-                    ]
-                    if filter_ephys == "notch" or filter_ephys == "both":
-                        ephys_data_for_channel = iir_notch(
-                            ephys_data_for_channel, ephys_sample_rate
-                        )
-                    if filter_ephys == "bandpass" or filter_ephys == "both":
-                        # 350-7000Hz band
-                        ephys_data_for_channel = butter_bandpass_filter(
-                            ephys_data_for_channel, 350.0, 7000.0, ephys_sample_rate
-                        )
+                    # ephys_data_for_channel = chosen_ephys_data_continuous_obj.samples[
+                    #     slice_for_ephys_during_video, channel_number
+                    # ]
+                    # if filter_ephys == "notch" or filter_ephys == "both":
+                    #     ephys_data_for_channel = iir_notch(
+                    #         ephys_data_for_channel, ephys_sample_rate
+                    #     )
+                    # if filter_ephys == "bandpass" or filter_ephys == "both":
+                    #     # 350-7000Hz band
+                    #     ephys_data_for_channel = butter_bandpass_filter(
+                    #         ephys_data_for_channel, 250.0, 5000.0, ephys_sample_rate
+                    #     )
                     MU_spike_idxs_for_channel, _ = find_peaks(
                         -ephys_data_for_channel,
                         height=iAmplitudes,

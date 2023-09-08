@@ -34,14 +34,6 @@ def rat_loco_analysis(
     CFG,
     session_indexes,
 ):
-    # def _check_export(func, *args, **kwargs):
-    #     if CFG["analysis"]["export_data"] is True:
-    #         for session_index in session_indexes:
-    #             func(*args, **kwargs, session_index=session_index)
-    #         else:
-    #             func(*args, **kwargs, session_index=session_indexes[0])
-    #     return
-
     # if not running a multi-session analysis, the first element in session_indexes is used
 
     if "multi" not in CFG["plotting"]["plot_type"]:
@@ -49,162 +41,82 @@ def rat_loco_analysis(
         if CFG["plotting"]["plot_type"] == "sort":
             from process_spikes import sort
 
-            # _check_export(
+            sort(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    sort(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_indexes,
-                    )
-            else:
-                sort(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
-            # )
         elif CFG["plotting"]["plot_type"] == "bin_and_count":
             from process_spikes import bin_and_count
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    bin_and_count(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_index,
-                    )
-            else:
-                bin_and_count(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
+            bin_and_count(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
         elif CFG["plotting"]["plot_type"] == "raster":
             from process_spikes import raster
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    raster(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_index,
-                    )
-            else:
-                raster(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
+            raster(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
         elif CFG["plotting"]["plot_type"] == "smoothed":
             from process_spikes import smoothed
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    smoothed(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_index,
-                    )
-            else:
-                smoothed(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
+            smoothed(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
         elif CFG["plotting"]["plot_type"] == "state_space":
             from process_spikes import state_space
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    state_space(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_index,
-                    )
-            else:
-                state_space(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
+            state_space(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
         elif CFG["plotting"]["plot_type"] == "MU_space_stepwise":
             from process_spikes import MU_space_stepwise
 
-            if CFG["analysis"]["export_data"] is True:
-                for session_index in session_indexes:
-                    MU_space_stepwise(
-                        chosen_rat,
-                        OE_dict,
-                        KS_dict,
-                        anipose_dict,
-                        CH_colors,
-                        MU_colors,
-                        CFG,
-                        session_index,
-                    )
-            else:
-                MU_space_stepwise(
-                    chosen_rat,
-                    OE_dict,
-                    KS_dict,
-                    anipose_dict,
-                    CH_colors,
-                    MU_colors,
-                    CFG,
-                    session_indexes[0],
-                )
+            MU_space_stepwise(
+                chosen_rat,
+                OE_dict,
+                KS_dict,
+                anipose_dict,
+                CH_colors,
+                MU_colors,
+                CFG,
+                session_indexes[0],
+            )
         elif CFG["plotting"]["plot_type"] == "behavioral_space":
             from process_steps import behavioral_space
 
@@ -216,7 +128,7 @@ def rat_loco_analysis(
                 CH_colors,
                 MU_colors,
                 CFG,
-                session_indexes,
+                session_indexes[0],
             )
         elif CFG["plotting"]["plot_type"] == "cluster_steps":
             from extras.cluster_steps import cluster_steps
@@ -229,7 +141,7 @@ def rat_loco_analysis(
                 CH_colors,
                 MU_colors,
                 CFG,
-                session_indexes,
+                session_indexes[0],
             )
         elif CFG["plotting"]["plot_type"] == "pandas_eda":
             from extras.pandas_eda import pandas_eda
@@ -242,7 +154,7 @@ def rat_loco_analysis(
                 CH_colors,
                 MU_colors,
                 CFG,
-                session_indexes,
+                session_indexes[0],
             )
         elif CFG["plotting"]["plot_type"] == "spike_motion_plot":
             from extras.spike_motion_plot import spike_motion_plot
@@ -255,11 +167,11 @@ def rat_loco_analysis(
                 CH_colors,
                 MU_colors,
                 CFG,
-                session_indexes,
+                session_indexes[0],
             )
     else:
         ### Functions with prefix "multi" are designed to loop and compare across multiple condtions
-        # multi_bin performs binning of spikes, plots results for all chosen conditions
+        # multi_bin_and_count performs binning of spikes, plots results for all chosen conditions
         if CFG["plotting"]["plot_type"] == "multi_sort":
             from process_spikes import sort
 
@@ -274,7 +186,7 @@ def rat_loco_analysis(
                     CFG,
                     session_index,
                 )
-        elif CFG["plotting"]["plot_type"] == "multi_bin":
+        elif CFG["plotting"]["plot_type"] == "multi_bin_and_count":
             from plotly.offline import iplot
             from plotly.subplots import make_subplots
 
@@ -293,6 +205,7 @@ def rat_loco_analysis(
                 filter_all_anipose,
                 trial_reject_bounds_mm,
                 trial_reject_bounds_sec,
+                trial_reject_bounds_vel,
                 origin_offsets,
                 save_binned_MU_data,
                 time_frame,
@@ -338,43 +251,6 @@ def rat_loco_analysis(
                     CFG,
                     session_index,
                 )
-
-                ### Unpack CFG Inputs
-                # unpack analysis inputs
-                (
-                    MU_spike_amplitudes_list,
-                    ephys_channel_idxs_list,
-                    filter_ephys,
-                    sort_method,
-                    bodypart_for_reference,
-                    bodypart_ref_filter,
-                    filter_all_anipose,
-                    trial_reject_bounds_mm,
-                    trial_reject_bounds_sec,
-                    origin_offsets,
-                    save_binned_MU_data,
-                    time_frame,
-                    bin_width_ms,
-                    num_rad_bins,
-                    smoothing_window,
-                    phase_align,
-                    align_to,
-                    export_data,
-                ) = CFG["analysis"].values()
-                # unpack plotting inputs
-                (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
-                    "plotting"
-                ].values()
-                # unpack chosen rat inputs
-                (
-                    bodyparts_list,
-                    bodypart_for_alignment,
-                    session_date,
-                    treadmill_speed,
-                    treadmill_incline,
-                    camera_fps,
-                    vid_length,
-                ) = CFG["rat"][chosen_rat].values()
 
                 num_sessions = len(session_date)
                 if sort_method == "kilosort":
@@ -422,43 +298,6 @@ def rat_loco_analysis(
         # and plots results combined results
         elif CFG["plotting"]["plot_type"] == "multijoin_bin_and_count":
             from multi_handler import multijoin_bin_and_count
-
-            ### Unpack CFG Inputs
-            # unpack analysis inputs
-            (
-                MU_spike_amplitudes_list,
-                ephys_channel_idxs_list,
-                filter_ephys,
-                sort_method,
-                sort_to_use,
-                bodypart_for_reference,
-                bodypart_ref_filter,
-                filter_all_anipose,
-                trial_reject_bounds_mm,
-                trial_reject_bounds_sec,
-                trial_reject_bounds_vel,
-                origin_offsets,
-                save_binned_MU_data,
-                time_frame,
-                bin_width_ms,
-                num_rad_bins,
-                smoothing_window,
-                phase_align,
-                align_to,
-                export_data,
-            ) = CFG["analysis"].values()
-            # unpack plotting inputs
-            (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
-            # unpack chosen rat inputs
-            (
-                bodyparts_list,
-                bodypart_for_alignment,
-                session_date,
-                treadmill_speed,
-                treadmill_incline,
-                camera_fps,
-                vid_length,
-            ) = CFG["rat"][chosen_rat].values()
 
             multijoin_bin_and_count(
                 chosen_rat,

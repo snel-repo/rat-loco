@@ -3,7 +3,7 @@ title = "Directory, Rat, Analysis, and Plotting Configurations"
 
 # Choose rat and session here (this only applies to single-session analyses)
 chosen_rat = 'godzilla' # 'cleopatra' | 'dogerat' | 'godzilla' | 'inkblot' | 'kitkat'
-chosen_sessions = [0,2] # integer index of session_date list in rat config
+chosen_sessions = [2] # integer index of session_date list in rat config
 
 [data_dirs]
 # OpenEphys folders below (list of strings)
@@ -37,7 +37,7 @@ anipose = [
     # '/snel/share/data/anipose/session20230106_128test2/'
     # '/snel/share/data/anipose/session20230209_godzilla_vids/'
     #'/snel/share/data/anipose/session20230627_inkblot_vids',
-    '/snel/share/data/anipose/analysis20230823_all_rat_vids/',
+    # '/snel/share/data/anipose/analysis20230823_all_rat_vids/',
     '/snel/share/data/anipose/analysis20230830_godzilla',
 ]
 
@@ -62,7 +62,7 @@ camera_fps=100 #100 FPS
 vid_length=20 #10/20/30 seconds
 
 [rat.godzilla]
-bodyparts_list = []#['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
+bodyparts_list = []#['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']#['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
 bodypart_for_alignment = ['palm_L_y'] # must provide 1 bodypart for alignment, e.g., ['palm_L_y']
 session_date = ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9']#['20221117-8', '20221117-10'] #['20221116-3','20221116-5','20221116-6','20221116-7','20221116-8','20221116-9'] | #['20221117-4'] | ['20221117-2','20221117-3','20221117-4','20221117-5','20221117-6','20221117-8','20221117-10']
 treadmill_speed = [5, 10, 5, 10, 10] # [10] # [15, 15] #[15,10,15,10, 5, 5,15,15]
@@ -99,14 +99,14 @@ vid_length = 60 #30/60 seconds
 [analysis]
 MU_spike_amplitudes_list = [[30,200],[200.0001,500],[500.0001,800],[800.0001,1100],[1100.0001,2000]]
 ephys_channel_idxs_list = [1,2,5,10,11,12]#,4,5,12,13,14,15]#[2,4,10,12,13,14,15]#[2,4]#[10,12]#[13,14,15] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
-filter_ephys = 'notch' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 350-7000Hz
+filter_ephys = 'both' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 250-5000Hz
 sort_method = 'kilosort' # 'kilosort'/'thresholding'
-sort_to_use = '20230829_184318' # 'latest' | 'best' | 'YYYYMMDD_HHMMSS' # 'latest' is the latest sort, 'best' is the best sort, or a specific date-time string
+sort_to_use = '20230908_175928' # 'latest' | 'best' | 'YYYYMMDD_HHMMSS' # 'latest' is the latest sort, 'best' is the best sort, or a specific date-time string
 bodypart_for_reference = 'tailbase' # choose bodypart to use as origin, without _x/_y/_z suffix, plug into origin_offsets as a value to subtract for that coordinate
 bodypart_ref_filter =  2 #Hz, Boolean/int Example: (False to disable filtering of bodypart_for_reference, 2 for 2Hz cutoff lowpass)
 filter_all_anipose = false # 'highpass' | 'lowpass' | 'bandpass' | 'median' | or Boolean false/0 # highpass is 0.5Hz, lowpass is 30Hz, bandpass is 0.5-30Hz
 trial_reject_bounds_mm = false # [[-25,25],[-25,25]] #mm, Boolean/Integer/2D List, rejects trials outside bounds of the trial average at each bodypart's alignment timepoint. Examples: Boolean / 40 / [[10,40],[-10,25]] for peak, trough values
-trial_reject_bounds_sec = [0.1,1] # [0.4,0.7] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
+trial_reject_bounds_sec = false# [0.1,1] # [0.4,0.7] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
 trial_reject_bounds_vel = false # [0, 0.5] #m/s, Boolean/2D List, rejects trials outside bounds of the trial average at each bodypart's alignment timepoint. Examples: Boolean / 0.5 / [[0,0.5],[0,0.5]] for peak, trough values
 origin_offsets = {x=-18,y='tailbase',z=135} # Values recorded from origin to treadmill bounds, bodypart string, or use zeroes for no offset. If bodypart_for_reference is set for one coordinate, it overrides setting and will subtract for that coordinate. Examples: [-18,211,135]/[-87,211,135]/[52,-310,0]/['nose','tailbase',135], can be disbaled with disabled with 0
 save_binned_MU_data = 0 # set Boolean
@@ -120,9 +120,9 @@ export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "multijoin_bin_and_count" # sort | bin_and_count | raster | smoothed | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
-plot_units =  [5,8,2,6,10,7]#[4,5,0,1,2,8,3]#[10,14,2,5,12]#[27,26,8,15,23,18]#[12,3,5,17,15,16]#[14,6,24,10,15,47,18,7]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
-do_plot = 3 # set integer, how to generate plots, 0 is false, 1 is true, set 2 for all plots in rat-loco function chain, set 3 to write plots to html instead (where implemented)
+plot_type = "sort" # sort | bin_and_count | raster | smoothed | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin_and_count | multi_state_space
+plot_units =  [7,1,5,3,4,0]#[4,5,0,1,2,8,3]#[10,14,2,5,12]#[27,26,8,15,23,18]#[12,3,5,17,15,16]#[14,6,24,10,15,47,18,7]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
+do_plot = 1 # set integer, how to generate plots, 0 is false, 1 is true, set 2 for all plots in rat-loco function chain, set 3 to write plots to html instead (where implemented)
 N_colors = 8 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
 plot_template = 'plotly_white'
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',

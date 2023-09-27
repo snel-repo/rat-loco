@@ -1,5 +1,5 @@
 from inspect import stack
-
+from pdb import set_trace
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -57,7 +57,7 @@ def butter_bandpass_filter(data, cutoffs, fs, order=2):
 # optionally applies filtering and offset or reference bodypart subtraction
 def peak_align_and_filt(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
-):
+):  
     ### Unpack CFG Inputs
     # unpack analysis inputs
     (
@@ -178,7 +178,7 @@ def peak_align_and_filt(
     # ref_aligned_df = bodypart_anipose_df # do not subtract any reference
     # ref_aligned_df[iCol] = \
     #     bodypart_anipose_df[iCol] + ref_bodypart_trace_list # add measured offsets
-
+    
     x_data = ref_aligned_df.columns.str.endswith("_x")
     y_data = ref_aligned_df.columns.str.endswith("_y")
     z_data = ref_aligned_df.columns.str.endswith("_z")
@@ -245,30 +245,20 @@ def peak_align_and_filt(
         wlen=None
         )
     
-    min_length = min(len(foot_strike_idxs),len(foot_off_idxs))
-    #Creates 
-    foot_off_arr = np.array([[np.ones(min_length,dtype=int)*-1], [foot_off_idxs]])
-    foot_strike_arr = np.array([[np.ones(min_length,dtype=int)*1], [foot_strike_idxs]])
-
-    weaved_strikes_offs = np.empty([2,min_length*2], dtype=int) 
-   
-    for i,j in zip(range(min_length),range(0,min_length*2,2)):
-        weaved_strikes_offs[0][j] = foot_off_arr[0][0][i]
-        weaved_strikes_offs[1][j] = foot_off_arr[1][0][i]
-        weaved_strikes_offs[0][j+1] = foot_strike_arr[0][0][i]
-        weaved_strikes_offs[1][j+1] = foot_strike_arr[1][0][i]
-
+    foot_offs_strikes = np.array([*foot_off_idxs, *foot_strike_idxs])
+    weaved_strikes_offs = [np.ones(len(foot_off_idxs)+len(foot_strike_idxs), dtype=int), foot_offs_strikes]
+    for i in range(0,len(foot_off_idxs)):
+        weaved_strikes_offs[0][i] = -1
     sorted_idxs = np.argsort(weaved_strikes_offs[1])
     weaved_strikes_offs[0] = weaved_strikes_offs[0][sorted_idxs]
     weaved_strikes_offs[1] = weaved_strikes_offs[1][sorted_idxs]
-    
+
     idxs_to_remove = []
+    bodypart_anipose_data = processed_anipose_df[bodypart_for_alignment].values
     for i in range(len(weaved_strikes_offs[0])-1):
         if weaved_strikes_offs[0][i] == weaved_strikes_offs[0][i+1]:
-            #change this to 1) see if it is a strike or a off, 2) keep lowest if off, keep highest if strike
-            #max value of kinematics
-            if np.abs(time_axis_for_anipose[weaved_strikes_offs[1][i]]) > np.abs(time_axis_for_anipose[weaved_strikes_offs[1][i+1]]):
-                idxs_to_remove.append(i+1) #might have to change this to account for valleys vs peaks 
+            if np.abs(bodypart_anipose_data[weaved_strikes_offs[1][i]][0]) > np.abs(bodypart_anipose_data[weaved_strikes_offs[1][i+1]][0]):
+                idxs_to_remove.append(i+1) 
             else:
                 idxs_to_remove.append(i)
     #set_trace()
@@ -429,12 +419,12 @@ def trialize_steps(
     # Z_data_npy = processed_anipose_df.loc[step_time_slice,Z_data_column_titles].to_numpy()
 
     # define variables for trializing data
-    # align_shift = 2/3 # default fraction of step
+    align_shift = 2/3 # default fraction of step
     pre_align_offset = int(
-        0
-    )  # int(sliced_step_stats.quantile(0.75) // 8) #int(sliced_step_stats.quantile(0.75) *    align_shift)
+        int(sliced_step_stats.quantile(0.75) * align_shift) #int(sliced_step_stats.quantile(0.75) *    align_shift) # //8
+    )  
     post_align_offset = int(
-        sliced_step_stats.quantile(0.75)
+        int(sliced_step_stats.quantile(0.75) * (1-align_shift))
     )  # * 7 // 8) #int(sliced_step_stats.quantile(0.75) * (1-align_shift))
     if align_to == "foot strike":
         step_idxs = foot_strike_idxs[step_slice]
@@ -450,6 +440,7 @@ def trialize_steps(
             processed_anipose_df.iloc[
                 i_step_idx - pre_align_offset : i_step_idx + post_align_offset, :
             ]
+            
         )
         # give column names to each step for all bodyparts, and
         # zerofill to the max number of digits in `true_step_idx`
@@ -659,190 +650,6 @@ def trialize_steps(
         trial_reject_bounds_mm,
         trial_reject_bounds_sec,
     )
-
-
-def behavioral_space(
-    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
-):
-    ### Unpack CFG Inputs
-    # unpack analysis inputs
-    (
-        MU_spike_amplitudes_list,
-        ephys_channel_idxs_list,
-        filter_ephys,
-        sort_method,
-        sort_to_use,
-        bodypart_for_reference,
-        bodypart_ref_filter,
-        filter_all_anipose,
-        trial_reject_bounds_mm,
-        trial_reject_bounds_sec,
-        trial_reject_bounds_vel,
-        origin_offsets,
-        save_binned_MU_data,
-        time_frame,
-        bin_width_ms,
-        num_rad_bins,
-        smoothing_window,
-        phase_align,
-        align_to,
-        export_data,
-    ) = CFG["analysis"].values()
-    # unpack plotting inputs
-    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
-    # unpack chosen rat inputs
-    (
-        bodyparts_list,
-        bodypart_for_alignment,
-        session_date,
-        treadmill_speed,
-        treadmill_incline,
-        camera_fps,
-        vid_length,
-    ) = CFG["rat"][chosen_rat].values()
-
-    # only display plot if rat_loco_analysis() is the caller
-    if plot_type.__contains__("multi") or not stack()[1].function == "rat_loco_analysis":
-        do_plot = False
-    if do_plot == 2:  # override above, always plot if do_plot==2
-        do_plot = True
-
-    session_ID_lst = []
-    trialized_anipose_dfs_lst = []
-    subtitles = []
-    for iTitle in treadmill_incline:
-        subtitles.append("<b>Incline: " + str(iTitle) + "</b>")
-    fig1 = go.Figure()
-    fig2 = make_subplots(
-        rows=len(bodyparts_list),
-        cols=len(treadmill_incline),
-        shared_xaxes=True,
-        shared_yaxes="rows",
-        subplot_titles=subtitles,
-    )
-    # f"<b>Locomotion Kinematics: {list(chosen_anipose_dict.keys())[0]}</b>",
-    # f"<b>Neural Activity: {list(chosen_ephys_data_dict.keys())[0]}</b>"
-    for iPar in range(len(treadmill_incline)):
-        i_session_date = session_date[iPar]
-        i_rat_name = chosen_rat.lower()
-        i_treadmill_speed = str(treadmill_speed[iPar]).zfill(2)
-        i_treadmill_incline = str(treadmill_incline[iPar]).zfill(2)
-        session_ID_lst.append(
-            f"{i_session_date}_{i_rat_name}_speed{i_treadmill_speed}_incline{i_treadmill_incline}"
-        )
-
-        (
-            trialized_anipose_df,
-            keep_trial_set,
-            foot_strike_idxs,
-            foot_off_idxs,
-            sliced_step_stats,
-            kept_step_stats,
-            step_slice,
-            step_time_slice,
-            ref_bodypart_trace_list,
-            pre_align_offset,
-            post_align_offset,
-            trial_reject_bounds_mm,
-            trial_reject_bounds_sec,
-        ) = trialize_steps(
-            chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
-        )
-        ### save trialized data hack
-        # set_trace()
-        # trialized_anipose_df.to_csv('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/trialized_anipose_df.csv')
-        # import scipy.io
-        # scipy.io.savemat('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/variables.mat', dict(trialized_anipose_df=trialized_anipose_df,keep_trial_set=list(keep_trial_set),foot_strike_idxs=foot_strike_idxs,foot_off_idxs=foot_off_idxs))
-        # scipy.io.savemat('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/step_idxs_only.mat', dict(keep_trial_set=list(keep_trial_set),foot_strike_idxs=foot_strike_idxs,foot_off_idxs=foot_off_idxs))
-
-        # trialize_steps(
-        #     anipose_dict, bodypart_for_alignment, bodypart_for_reference, bodypart_ref_filter,
-        #     trial_reject_bounds_mm, trial_reject_bounds_sec, origin_offsets, bodyparts_list,
-        #     filter_all_anipose, session_date[iPar], rat_name[iPar], treadmill_speed[iPar],
-        #     treadmill_incline[iPar], camera_fps, align_to, time_frame)
-        trialized_anipose_dfs_lst.append(trialized_anipose_df)
-        trialized_anipose_dfs_lst[iPar]["Labels"] = pd.Series(
-            int(i_treadmill_incline) * np.ones(anipose_dict[session_ID_lst[iPar]].shape[0])
-        )
-
-        # get trial averages by filtering for all columns that match
-        trial_ave_lst = []
-        for iBodypart in range(len(bodyparts_list)):
-            trial_ave_lst.append(
-                trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).mean(axis=1)
-            )
-
-        # plot trial averages across inclines
-        fig1.add_trace(
-            go.Scatter(
-                x=trial_ave_lst[0],
-                y=trial_ave_lst[1] if len(trial_ave_lst) > 1 else trial_ave_lst[0],
-                mode="lines",
-                name=f"incline{i_treadmill_incline}",
-                line_color=MU_colors[int(i_treadmill_incline) // 5],
-            )
-        )
-        fig1.add_trace(
-            go.Scatter(
-                x=[trial_ave_lst[0][0]],
-                y=[trial_ave_lst[1][0] if len(trial_ave_lst) > 1 else trial_ave_lst[0][0]],
-                mode="markers",
-                marker_line_color="black",
-                marker_color=CH_colors[int(i_treadmill_incline) // 5],
-                marker_line_width=2,
-                marker_size=15,
-                marker_symbol="asterisk",
-                name=f"incline{i_treadmill_incline} start",
-            )
-        )
-
-        # plot single trajectories
-        for iBodypart in range(len(bodyparts_list)):
-            anipose_bodypart_trials = trialized_anipose_df.filter(
-                like=bodyparts_list[iBodypart]
-            ).to_numpy()
-            data_col_names = trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).columns
-            for iTrial, iName in zip(anipose_bodypart_trials.T, data_col_names):
-                fig2.add_trace(
-                    go.Scatter(
-                        x=np.linspace(
-                            -pre_align_offset / camera_fps,
-                            post_align_offset / camera_fps,
-                            len(iTrial),
-                        ),
-                        y=iTrial,
-                        mode="lines",
-                        name=iName,
-                        opacity=0.9,
-                        line_color=MU_colors[int(i_treadmill_incline) // 5],
-                        line=dict(width=2),
-                    ),
-                    col=iPar + 1,
-                    row=iBodypart + 1,
-                )
-            fig2.add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
-
-    # Edit the layout
-    fig1.update_layout(
-        title=f"<b>Behavioral State Space Across {bodyparts_list[0]} and {bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]}, Trial Averages</b>",
-        xaxis_title="<b>" + bodyparts_list[0] + " mean</b>",
-        yaxis_title=f"<b>{bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]} mean</b>",
-    )
-    fig1.update_yaxes(scaleanchor="x", scaleratio=1)
-
-    fig2.update_layout(
-        title=f"<b>Locomotion Kinematics, Aligned to {align_to.title()}: {i_session_date}_{i_rat_name}_speed{i_treadmill_speed}</b>"
-    )  # Trial Rejection Bounds: {trial_reject_bounds_mm}</b>')
-    for xx in range(len(treadmill_incline)):
-        fig2.update_xaxes(title_text="<b>Time (sec)</b>", row=len(bodyparts_list), col=xx + 1)
-    for yy, yTitle in enumerate(bodyparts_list):
-        fig2.update_yaxes(title_text="<b>" + str(yTitle) + " (mm)</b>", row=yy + 1, col=1)
-    # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
-    # fig2.update_yaxes(matches='y')
-
-    iplot(fig1)
-    iplot(fig2)
-    return
 
 
 # calculates reference bodypart's velocity in xyz axes using diff() function

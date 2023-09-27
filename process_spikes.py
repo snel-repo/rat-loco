@@ -3,9 +3,10 @@ from inspect import stack
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import butter, filtfilt, find_peaks, iirnotch
-
+from pdb import set_trace
 import plot_handler
 from process_steps import peak_align_and_filt, trialize_steps
+import inspect
 
 # from pdb import set_trace
 # from sklearn.decomposition import PCA
@@ -110,7 +111,10 @@ def sort(
         )
 
     if do_plot == 2:  # override and ensure all plots are generated along the way
-        plot_flag = True
+        if inspect.stack()[1][3] == "behavioral_space":
+            plot_flag = False
+        else:
+            plot_flag = True
     elif do_plot == 0:
         plot_flag = False
     else:  # only display plot if rat_loco_analysis() is the caller
@@ -122,7 +126,6 @@ def sort(
             )
             else False
         )
-
     # extract data from dictionaries
     chosen_ephys_data_continuous_obj = OE_dict[session_ID]
     chosen_anipose_df = anipose_dict[session_ID]
@@ -157,7 +160,7 @@ def sort(
         np.arange(0, vid_length, 1 / camera_fps)
         + time_axis_for_ephys[start_video_capture_ephys_idx]
     )
-
+    anipose_dict['time_axis_for_anipose'] = time_axis_for_anipose
     # # identify motion peak locations of bodypart for step cycle alignment
     # if filter_all_anipose == True:
     #     filtered_signal = butter_highpass_filter(
@@ -379,6 +382,24 @@ def sort(
         # x = loadmat(f'{session_ID}.mat')
     # else:
     #     sliced_MU_spikes_dict = dict()
+    
+    
+    if inspect.stack()[1][3] == "behavioral_space":
+        print(f"{inspect.stack()[0][3]}() was called by {inspect.stack()[1][3]}()")
+
+        steps_dict = create_steps_dict(
+            plot_units,
+            time_axis_for_ephys,
+            MU_spikes_dict,
+            slice_for_ephys_during_video,
+            time_frame,
+            time_axis_for_anipose,
+            foot_strike_slice_idxs,
+            foot_off_slice_idxs,
+            )
+        
+        return steps_dict
+
     return (
         MU_spikes_dict,
         time_axis_for_ephys,
@@ -1330,7 +1351,7 @@ def MU_space_stepwise(
 # Helper function for comparing kinematics of bodypart to sorted spikes
 ## Called by sort() if expected
 def create_steps_dict(
-    UnitKeys,
+    plot_units,
     time_axis_for_ephys,
     MU_spikes_dict,
     slice_for_ephys_during_video,
@@ -1345,8 +1366,6 @@ def create_steps_dict(
         return idx
 
     ## MAKE VARIABLE FOR HOW MANY UNITS TO USE ##
-    units_to_view = 3  # could just change plot_units var in config
-    MUnits = UnitKeys[0:units_to_view]
 
     ## CREATES DICTIONARY OF STEPS WITH ALIGNED TIME VALUES FOR DURATION OF EACH STEP ##
     steps_dict = {}
@@ -1375,7 +1394,7 @@ def create_steps_dict(
         }
 
     # To organize sorted spikes
-    for iUnit, iUnitKey in enumerate(MUnits):
+    for iUnit, iUnitKey in enumerate(plot_units):
         MU_spikes_dict_for_unit = (
             MU_spikes_dict[iUnitKey][:]
             if time_frame == 1
@@ -1399,7 +1418,7 @@ def create_steps_dict(
     # Plot each step -behavioral_space overlaps steps (color map gradient, continous spectrum)
     # See if there is relationship with body velocity & limb velocity (and be able to choose analyses)
     # Sort kinematic traces first (based on motor unit offsets)
-    return steps_dict, MUnits
+    return steps_dict
 
 
 # def plot_steps_by_neural(steps_dict, MUnits):

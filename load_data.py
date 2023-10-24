@@ -225,6 +225,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
     data_dir_list = CFG["data_dirs"]["KS"]
     sort_to_use = CFG["analysis"]["sort_to_use"]
     session_iterator_copy = session_iterator.copy()  # copy to avoid modifying original list
+    cluster_id_ephys_data_dict = {}
     for data_dir in data_dir_list:
         recording_lengths_arr_list = []
         num_channels_list = []
@@ -236,8 +237,6 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         session = Session(
             data_dir
         )  # copy over structure.oebin from recording folder to recording99 folder or errors
-        clusterIDs_ephys_spikeTimes = {}
-        cluster_id_ephys_data_dict = {}
 
         sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
         ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat"))
@@ -250,15 +249,20 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 str(rec) for rec in recordings_to_use
             ]:
                 continue  # skips recording if it is not in recordings_to_use
+            # first, find file which has 'Rhythm' in it, then define timestamps_file variable
+            Rhythm_folder = [
+                file
+                for file in os.listdir(
+                    session.recordnodes[0].recordings[iRec].directory + "/continuous"
+                )
+                if "Rhythm" in file
+            ][0]
             timestamps_file = (
                 session.recordnodes[0].recordings[iRec].directory
-                + "/continuous/Acquisition_Board-100.Rhythm Data/timestamps.npy"
+                + "/continuous/"
+                + Rhythm_folder
+                + "/timestamps.npy"
             )
-            if not os.path.exists(timestamps_file):
-                timestamps_file = (
-                    session.recordnodes[0].recordings[iRec].directory
-                    + "/continuous/Rhythm_FPGA-100.0/timestamps.npy"
-                )
             num_channels_list.append(
                 session.recordnodes[0].recordings[iRec].info["continuous"][0]["num_channels"]
             )
@@ -335,9 +339,13 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
 
         # take cumsum to use later for recording file index boundaries
         recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(), 0, 0).astype(int)
-        cluster_id_ephys_data_dict = dict.fromkeys(tuple(*session_IDs_dict.values()))
+
+        # session_IDs_values = session_IDs_dict.values()
+        # session_IDs_iter = iter(session_IDs_values)
+        cluster_id_ephys_data_dict_temp = dict.fromkeys(tuple(session_IDs_temp))
+        cluster_id_ephys_data_dict.update(cluster_id_ephys_data_dict_temp)
         for iChosen, session_ID in enumerate(session_IDs_dict[data_dir]):
-            clusterIDs_ephys_spikeTimes = clusterIDs_ephys_spikeTimes.copy()
+            clusterIDs_ephys_spikeTimes = {}
             for id in clusterIDs:
                 clusterIDs_ephys_spikeTimes_id_all = spikeTimes_arr[
                     np.where(spikeClusters_arr == id)

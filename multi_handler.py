@@ -23,11 +23,14 @@ def multijoin_bin_and_count(
         MU_spike_amplitudes_list,
         ephys_channel_idxs_list,
         filter_ephys,
+        ephys_cutoffs,
         sort_method,
         sort_to_use,
+        disable_anipose,
         bodypart_for_reference,
         bodypart_ref_filter,
         filter_all_anipose,
+        anipose_cutoffs,
         trial_reject_bounds_mm,
         trial_reject_bounds_sec,
         trial_reject_bounds_vel,
@@ -101,6 +104,9 @@ def multijoin_bin_and_count(
                     joined_MU_step_aligned_spike_idxs_dict[key]
                     + MU_step_aligned_spike_idxs_dict[key]
                 )
+                from pdb import set_trace
+
+                set_trace()
                 joined_MU_step_2π_warped_spike_idxs_dict[key] = (
                     joined_MU_step_2π_warped_spike_idxs_dict[key]
                     + MU_step_2π_warped_spike_idxs_dict[key]

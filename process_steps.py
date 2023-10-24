@@ -1,5 +1,6 @@
 from inspect import stack
 from pdb import set_trace
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,20 +8,20 @@ import plotly.graph_objects as go
 from IPython.display import display
 from plotly.offline import iplot
 from plotly.subplots import make_subplots
-from scipy.signal import butter, find_peaks, medfilt, sosfiltfilt
+from scipy.signal import butter, filtfilt, find_peaks, medfilt
 
 
 # create highpass filter to remove baseline from foot tracking for better peak finding performance
 def butter_highpass(cutoff, fs, order=2):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
-    sos = butter(order, normal_cutoff, btype="high", analog=False, output="sos")
-    return sos
+    b, a = butter(order, normal_cutoff, btype="high")  # , analog=False) #, output="sos")
+    return b, a
 
 
 def butter_highpass_filter(data, cutoff, fs, order=2):
-    sos = butter_highpass(cutoff, fs, order=order)
-    y = sosfiltfilt(sos, data)
+    b, a = butter_highpass(cutoff, fs, order=order)
+    y = filtfilt(b, a, data)
     return y
 
 
@@ -28,13 +29,13 @@ def butter_highpass_filter(data, cutoff, fs, order=2):
 def butter_lowpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
-    sos = butter(order, normal_cutoff, btype="low", analog=False, output="sos")
-    return sos
+    b, a = butter(order, normal_cutoff, btype="low")  # , analog=False, output="sos")
+    return b, a
 
 
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    sos = butter_lowpass(cutoff, fs, order=order)
-    y = sosfiltfilt(sos, data)
+def butter_lowpass_filter(data, cutoff, fs, order=2):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = filtfilt(b, a, data)
     return y
 
 
@@ -43,13 +44,13 @@ def butter_bandpass(cutoffs, fs, order=2):
     assert len(cutoffs) == 2
     nyq = 0.5 * fs
     normal_cutoffs = np.array(cutoffs) / nyq
-    sos = butter(order, normal_cutoffs, btype="bandpass", analog=False, output="sos")
-    return sos
+    b, a = butter(order, normal_cutoffs, btype="bandpass")  # , analog=False, output="sos")
+    return b, a
 
 
 def butter_bandpass_filter(data, cutoffs, fs, order=2):
-    sos = butter_bandpass(cutoffs, fs, order=order)
-    y = sosfiltfilt(sos, data)
+    b, a = butter_bandpass(cutoffs, fs, order=order)
+    y = filtfilt(b, a, data)
     return y
 
 
@@ -57,18 +58,21 @@ def butter_bandpass_filter(data, cutoffs, fs, order=2):
 # optionally applies filtering and offset or reference bodypart subtraction
 def peak_align_and_filt(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
-):  
+):
     ### Unpack CFG Inputs
     # unpack analysis inputs
     (
         MU_spike_amplitudes_list,
         ephys_channel_idxs_list,
         filter_ephys,
+        ephys_cutoffs,
         sort_method,
         sort_to_use,
+        disable_anipose,
         bodypart_for_reference,
         bodypart_ref_filter,
         filter_all_anipose,
+        anipose_cutoffs,
         trial_reject_bounds_mm,
         trial_reject_bounds_sec,
         trial_reject_bounds_vel,
@@ -178,7 +182,7 @@ def peak_align_and_filt(
     # ref_aligned_df = bodypart_anipose_df # do not subtract any reference
     # ref_aligned_df[iCol] = \
     #     bodypart_anipose_df[iCol] + ref_bodypart_trace_list # add measured offsets
-    
+
     x_data = ref_aligned_df.columns.str.endswith("_x")
     y_data = ref_aligned_df.columns.str.endswith("_y")
     z_data = ref_aligned_df.columns.str.endswith("_z")
@@ -193,25 +197,23 @@ def peak_align_and_filt(
         ignore_index=False,
     )
 
-    low = 0.5
-    high = 25
+    low = 1
+    high = 8
     if filter_all_anipose == "highpass":
         filtered_anipose_data = butter_highpass_filter(
-            data=sorted_body_anipose_df.values, cutoff=low, fs=camera_fps, order=3
+            data=sorted_body_anipose_df.values, cutoff=low, fs=camera_fps, order=2
         )
-        print(
-            f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz, highcut = {high}Hz)."
-        )
+        print(f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz).")
     elif filter_all_anipose == "lowpass":
         filtered_anipose_data = butter_lowpass_filter(
-            data=sorted_body_anipose_df.values, cutoff=high, fs=camera_fps, order=3
+            data=sorted_body_anipose_df.values, cutoff=high, fs=camera_fps, order=2
         )
         print(
-            f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz, highcut = {high}Hz)."
+            f"A {filter_all_anipose} filter was applied to all anipose data (highcut = {high}Hz)."
         )
     elif filter_all_anipose == "bandpass":
         filtered_anipose_data = butter_bandpass_filter(
-            data=sorted_body_anipose_df.values, cutoffs=[low, high], fs=camera_fps, order=3
+            data=sorted_body_anipose_df.values, cutoffs=[low, high], fs=camera_fps, order=2
         )
         print(
             f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz, highcut = {high}Hz)."
@@ -242,12 +244,15 @@ def peak_align_and_filt(
         distance=30,
         prominence=None,
         width=10,
-        wlen=None
-        )
-    
+        wlen=None,
+    )
+
     foot_offs_strikes = np.array([*foot_off_idxs, *foot_strike_idxs])
-    weaved_strikes_offs = [np.ones(len(foot_off_idxs)+len(foot_strike_idxs), dtype=int), foot_offs_strikes]
-    for i in range(0,len(foot_off_idxs)):
+    weaved_strikes_offs = [
+        np.ones(len(foot_off_idxs) + len(foot_strike_idxs), dtype=int),
+        foot_offs_strikes,
+    ]
+    for i in range(0, len(foot_off_idxs)):
         weaved_strikes_offs[0][i] = -1
     sorted_idxs = np.argsort(weaved_strikes_offs[1])
     weaved_strikes_offs[0] = weaved_strikes_offs[0][sorted_idxs]
@@ -255,27 +260,29 @@ def peak_align_and_filt(
 
     idxs_to_remove = []
     bodypart_anipose_data = processed_anipose_df[bodypart_for_alignment].values
-    for i in range(len(weaved_strikes_offs[0])-1):
-        if weaved_strikes_offs[0][i] == weaved_strikes_offs[0][i+1]:
-            if np.abs(bodypart_anipose_data[weaved_strikes_offs[1][i]][0]) > np.abs(bodypart_anipose_data[weaved_strikes_offs[1][i+1]][0]):
-                idxs_to_remove.append(i+1) 
+    for i in range(len(weaved_strikes_offs[0]) - 1):
+        if weaved_strikes_offs[0][i] == weaved_strikes_offs[0][i + 1]:
+            if np.abs(bodypart_anipose_data[weaved_strikes_offs[1][i]][0]) > np.abs(
+                bodypart_anipose_data[weaved_strikes_offs[1][i + 1]][0]
+            ):
+                idxs_to_remove.append(i + 1)
             else:
                 idxs_to_remove.append(i)
-    #set_trace()
+    # set_trace()
     cleaned_strikes_offs = np.delete(weaved_strikes_offs[1], idxs_to_remove, axis=0)
 
-    if foot_off_idxs[0] < foot_strike_idxs[0]:
-        foot_off_idxs = cleaned_strikes_offs[::2]
-        foot_strike_idxs = cleaned_strikes_offs[1::2]
-    else:
-        foot_strike_idxs = cleaned_strikes_offs[::2]
-        foot_off_idxs = cleaned_strikes_offs[1::2]
+    # if foot_off_idxs[0] < foot_strike_idxs[0]:
+    #     foot_off_idxs = cleaned_strikes_offs[::2]
+    #     foot_strike_idxs = cleaned_strikes_offs[1::2]
+    # else:
+    #     foot_strike_idxs = cleaned_strikes_offs[::2]
+    #     foot_off_idxs = cleaned_strikes_offs[1::2]
 
-    #set_trace()
+    # # set_trace()
 
-    # index off outermost steps, to skip noisy initial tracking
-    # foot_strike_idxs=foot_strike_idxs[1:-1]
-    # foot_off_idxs=foot_off_idxs[1:-1]
+    # # index off outermost steps, to skip noisy initial tracking
+    # foot_strike_idxs = foot_strike_idxs[1:-1]
+    # foot_off_idxs = foot_off_idxs[1:-1]
 
     if align_to == "foot strike":
         step_idxs = foot_strike_idxs
@@ -285,14 +292,8 @@ def peak_align_and_filt(
     # all_steps_df = pd.DataFrame(step_idxs)
     # all_step_stats = all_steps_df.describe()[0]
 
-    # foot_strike_slice_idxs = [
-    #     foot_strike_idxs[start_step],
-    #     foot_strike_idxs[stop_step]
-    #     ]
-    # foot_off_slice_idxs = [
-    #     foot_off_idxs[start_step],
-    #     foot_off_idxs[stop_step]
-    #     ]
+    # foot_strike_slice_idxs = [foot_strike_idxs[start_step], foot_strike_idxs[stop_step]]
+    # foot_off_slice_idxs = [foot_off_idxs[start_step], foot_off_idxs[stop_step]]
     if time_frame == 1:
         step_time_slice = slice(0, -1)
         time_frame = [0, 1]
@@ -357,11 +358,14 @@ def trialize_steps(
         MU_spike_amplitudes_list,
         ephys_channel_idxs_list,
         filter_ephys,
+        ephys_cutoffs,
         sort_method,
         sort_to_use,
+        disable_anipose,
         bodypart_for_reference,
         bodypart_ref_filter,
         filter_all_anipose,
+        anipose_cutoffs,
         trial_reject_bounds_mm,
         trial_reject_bounds_sec,
         trial_reject_bounds_vel,
@@ -419,12 +423,14 @@ def trialize_steps(
     # Z_data_npy = processed_anipose_df.loc[step_time_slice,Z_data_column_titles].to_numpy()
 
     # define variables for trializing data
-    align_shift = 2/3 # default fraction of step
+    align_shift = 2 / 3  # default fraction of step
     pre_align_offset = int(
-        int(sliced_step_stats.quantile(0.75) * align_shift) #int(sliced_step_stats.quantile(0.75) *    align_shift) # //8
-    )  
+        int(
+            sliced_step_stats.quantile(0.75) * align_shift
+        )  # int(sliced_step_stats.quantile(0.75) *    align_shift) # //8
+    )
     post_align_offset = int(
-        int(sliced_step_stats.quantile(0.75) * (1-align_shift))
+        int(sliced_step_stats.quantile(0.75) * (1 - align_shift))
     )  # * 7 // 8) #int(sliced_step_stats.quantile(0.75) * (1-align_shift))
     if align_to == "foot strike":
         step_idxs = foot_strike_idxs[step_slice]
@@ -440,7 +446,6 @@ def trialize_steps(
             processed_anipose_df.iloc[
                 i_step_idx - pre_align_offset : i_step_idx + post_align_offset, :
             ]
-            
         )
         # give column names to each step for all bodyparts, and
         # zerofill to the max number of digits in `true_step_idx`

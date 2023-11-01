@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 from open_ephys.analysis import Session
+from pdb import set_trace
 
 
 def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
@@ -222,6 +223,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
     session_IDs_dict = (
         {}
     )  # stores .info Session IDs of each recording in order under directory keys
+    # import pdb; pdb.set_trace()
     data_dir_list = CFG["data_dirs"]["KS"]
     sort_to_use = CFG["analysis"]["sort_to_use"]
     session_iterator_copy = session_iterator.copy()  # copy to avoid modifying original list
@@ -250,6 +252,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 str(rec) for rec in recordings_to_use
             ]:
                 continue  # skips recording if it is not in recordings_to_use
+            #set_trace()
             timestamps_file = (
                 session.recordnodes[0].recordings[iRec].directory
                 + "/continuous/Acquisition_Board-100.Rhythm Data/timestamps.npy"
@@ -285,6 +288,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 print(session.recordnodes[0].recordings[iRec].directory + "has no .info file")
                 return
         if len(session_IDs_temp) == 0:
+            print("No matching session ID found within the KiloSort folder provided.")
             continue
         session_IDs_dict[
             data_dir

@@ -3,7 +3,7 @@
 # import matplotlib.pyplot as plt
 # import numpy as np
 # import pandas as pd
-# import plotly.graph_objects as go
+import plotly.graph_objects as go
 # from IPython.display import display
 # from plotly.offline import iplot
 # from plotly.subplots import make_subplots
@@ -13,10 +13,30 @@ from process_spikes import *
 from process_steps import *
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import plotly.express as px
+
 
 def behavioral_space(
     chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
 ):
+    def normalized_value_to_hex_color(value):
+        # Define your color scale with two colors (e.g., blue to red)
+        color1 = '#0000FF'  # Blue
+        color2 = '#00AA00'  # Green
+
+        # Convert the hex color strings to RGB tuples 
+        r1, g1, b1 = int(color1[1:3], 16), int(color1[3:5], 16), int(color1[5:7], 16)
+        r2, g2, b2 = int(color2[1:3], 16), int(color2[3:5], 16), int(color2[5:7], 16)
+
+        # Interpolate between the two colors based on the normalized value
+        r = int(r1 + (r2 - r1) * value)
+        g = int(g1 + (g2 - g1) * value)
+        b = int(b1 + (b2 - b1) * value)
+
+        # Convert the interpolated RGB values back to a hex color code
+        hex_color = "#{:02X}{:02X}{:02X}".format(r, g, b)
+
+        return hex_color
     ### Unpack CFG Inputs
     # unpack analysis inputs
     (
@@ -75,14 +95,22 @@ def behavioral_space(
         shared_yaxes="rows",
         subplot_titles=subtitles,
     )
+    fig3 = make_subplots( # MU gradient plot
+        rows=len(bodyparts_list),
+        cols=len(treadmill_incline),
+        shared_xaxes=True,
+        shared_yaxes="rows",
+        subplot_titles=subtitles,
+    )
     # f"<b>Locomotion Kinematics: {list(chosen_anipose_dict.keys())[0]}</b>",
     # f"<b>Neural Activity: {list(chosen_ephys_data_dict.keys())[0]}</b>"
     
     #Call sort to create ordered steps dictionary with separated unique motor unit spike times  
     steps_dict = sort(chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator)
     MU_time_diff_steps = {}
-    smallest_MU = plot_units[0]
-    largest_MU = plot_units[-1]
+    print(f"Smallest to Largest MU: {plot_units}")
+    smallest_MU = int(input("Enter int value of smallest MU: "))
+    largest_MU = int(input("Enter int value of largest MU: "))
     for iStep in steps_dict:
         #if len(steps_dict[iStep][f'MU:{largest_MU} Indexes'])>0 & len(steps_dict[iStep][f'MU:{smallest_MU} Indexes'])>0:
         try:
@@ -116,9 +144,12 @@ def behavioral_space(
     ) = trialize_steps(
         chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
     )
-    set_trace()
-    # import plotly.express as px
-    # fig = px.line(trialized_anipose_df, x = trialized_anipose_df.index, y = trialized_anipose_df.filter(like='palm_L_y').columns, template = 'plotly_dark'); fig.show()
+    
+    ##set_trace() # Maps each step quickly 
+    #import plotly.express as px
+    #fig = px.line(trialized_anipose_df, x = trialized_anipose_df.index, y = trialized_anipose_df.filter(like='palm_L_y').columns, template = 'plotly_dark'); fig.show()
+    
+    
         ### save trialized data hack
         # set_trace()
         # trialized_anipose_df.to_csv('/snel/share/data/rodent-ephys/open-ephys/treadmill/2022-11-16_16-19-28/Record Node 101/experiment2/recording2/anipose/trialized_anipose_df.csv')
@@ -172,17 +203,15 @@ def behavioral_space(
             like=bodyparts_list[iBodypart]
         ).to_numpy()
         data_col_names = trialized_anipose_df.filter(like=bodyparts_list[iBodypart]).columns
-        start_color = [1, 0, 0]  # Red
-        end_color = [0, 0, 1]    # Blue    
-        cmap = LinearSegmentedColormap.from_list("custom_gradient", [start_color, end_color])     
-        normalized_values = [(value - min(MU_time_diff_steps.values())) / (max(MU_time_diff_steps.values()) - min(MU_time_diff_steps.values())) for value in MU_time_diff_steps.values()]
-        colors = cmap(normalized_values)
-        #set_trace()
+        # start_color = [1, 0, 0]  # Red
+        # end_color = [0, 0, 1]    # Blue    
+        # cmap = LinearSegmentedColormap.from_list("custom_gradient", [start_color, end_color])     
+        # normalized_values = [(value - min(MU_time_diff_steps.values())) / (max(MU_time_diff_steps.values()) - min(MU_time_diff_steps.values())) for value in MU_time_diff_steps.values()]
+        # colors = cmap(normalized_values)
         num = 0
-        for iTrial, iName, iStep in zip(anipose_bodypart_trials.T, data_col_names, range(len(anipose_bodypart_trials.T))):
+        for iTrial, iName in zip(anipose_bodypart_trials.T, data_col_names):
+            #set_trace()
             try:
-                _ = MU_time_diff_steps[num]
-                MU_line_color = f'rgba{tuple(colors[iStep]*255)}'
                 fig2.add_trace(
                 go.Scatter(
                     x=np.linspace(
@@ -194,8 +223,8 @@ def behavioral_space(
                     mode="lines",
                     name=iName,
                     opacity=0.9,
-                    line_color = MU_line_color,
-                    # line_color=MU_colors[int(i_treadmill_incline) // 5],
+                    line_color = 'black',
+                    #line_color=colors[int(iTrial)],
                     line=dict(width=2),
                 ),
                 col=session_iterator + 1,
@@ -206,7 +235,41 @@ def behavioral_space(
                 continue
             
         fig2.add_vline(x=0, line_width=3, line_dash="dash", line_color="black", name=align_to)
-
+        
+        ## Mani Code for gradient plot ##
+        steps_gradient_plot = [x for x in MU_time_diff_steps.keys()]
+        anipose_gradient_trials = anipose_bodypart_trials.T[steps_gradient_plot]
+        gradient_col_names = data_col_names[steps_gradient_plot]
+        values_gradient_plot = [x for x in MU_time_diff_steps.values()]
+        normalized_values = (values_gradient_plot - min(values_gradient_plot)) / (max(values_gradient_plot) - min(values_gradient_plot))
+        colors = [normalized_value_to_hex_color(value) for value in normalized_values]
+        set_trace()
+        for iTrial, iName, iNum in zip(anipose_gradient_trials, gradient_col_names, range(len(colors))):
+            #set_trace()
+            try:
+                fig3.add_trace(
+                go.Scatter(
+                    x=np.linspace(
+                        -pre_align_offset / camera_fps,
+                        post_align_offset / camera_fps,
+                        len(iTrial),
+                    ),
+                    y=iTrial,
+                    mode="lines",
+                    name=iName,
+                    opacity=0.9,
+                    #line_color = 'black',
+                    line_color=colors[iNum],
+                    line=dict(width=2),
+                ),
+                col=session_iterator + 1,
+                row=iBodypart + 1,
+                )
+                num += 1
+            except KeyError:
+                continue
+            
+            
     # Edit the layout
     fig1.update_layout(
         title=f"<b>Behavioral State Space Across {bodyparts_list[0]} and {bodyparts_list[1] if len(bodyparts_list)>1 else bodyparts_list[0]}, Trial Averages</b>",
@@ -224,7 +287,16 @@ def behavioral_space(
         fig2.update_yaxes(title_text="<b>" + str(yTitle) + " (mm)</b>", row=yy + 1, col=1)
     # fig2.update_yaxes(scaleanchor = "x",scaleratio = 1)
     # fig2.update_yaxes(matches='y')
+    
+    fig3.update_layout(
+        title=f"<b>Locomotion Kinematics, Aligned to {align_to.title()}: {i_session_date}_{i_rat_name}_speed{i_treadmill_speed}. Plot Units: {smallest_MU}, {largest_MU}</b>"
+    )  # Trial Rejection Bounds: {trial_reject_bounds_mm}</b>')
+    for xx in range(len(treadmill_incline)):
+        fig3.update_xaxes(title_text="<b>Time (sec)</b>", row=len(bodyparts_list), col=xx + 1)
+    for yy, yTitle in enumerate(bodyparts_list):
+        fig3.update_yaxes(title_text="<b>" + str(yTitle) + " (mm)</b>", row=yy + 1, col=1)
 
     iplot(fig1)
     iplot(fig2)
+    iplot(fig3)
     return

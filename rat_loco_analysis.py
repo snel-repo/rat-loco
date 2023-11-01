@@ -119,7 +119,6 @@ def rat_loco_analysis(
             )
         elif CFG["plotting"]["plot_type"] == "behavioral_space":
             from combine_analyses import behavioral_space
-
             behavioral_space(
                 chosen_rat,
                 OE_dict,

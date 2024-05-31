@@ -1,4 +1,3 @@
-
 //https://www.instructables.com/Arduino-Timer-Interrupts/
 
 const byte inputPin = 2; // start recording pin
@@ -19,7 +18,7 @@ volatile boolean toggle1 = 0;
 void setup() {
   // put your setup code here, to run once:
 
-  pinMode(inputPin, INPUT);
+  pinMode(inputPin, INPUT_PULLUP);
   pinMode(modePin, INPUT_PULLUP);
   pinMode(outputPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
@@ -63,13 +62,14 @@ void setup() {
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
-  attachInterrupt(digitalPinToInterrupt(inputPin), start_timer, RISING);
+  attachInterrupt(digitalPinToInterrupt(inputPin), start_timer, FALLING);
 
   sei(); //allow interrupts
 
   //Serial.begin(38400);
 }
 
+// Interrupt Service Routine (ISR)
 ISR(TIMER1_COMPA_vect){ 
   //generates pulse wave of timer freq/2 (takes two cycles for full wave- toggle high then toggle low)
   if (record_on)
@@ -92,7 +92,6 @@ ISR(TIMER1_COMPA_vect){
 
 }
 
-
 void start_timer()
 {
     // reset timer count
@@ -105,13 +104,12 @@ void start_timer()
     toggle1 = 0;
 }
 
-
 void loop() {
 
   mode = 1-digitalRead(modePin);
   digitalWrite(ledPin, mode);
 
-  record_on = digitalRead(inputPin);
+  record_on = 1-digitalRead(inputPin);
   digitalWrite(intanPin, record_on);
   
 }

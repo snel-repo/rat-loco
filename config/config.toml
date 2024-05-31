@@ -1,20 +1,30 @@
 # TOML configuration document
 title = "Directory, Rat, Analysis, and Plotting Configurations"
 
+# Choose rat and session here (this only applies to single-session analyses)
+chosen_rat = 'godzilla' # 'cleopatra' | 'dogerat' | 'godzilla' | 'inkblot' | 'kitkat'
+chosen_sessions =[3] # [0, 2, 1, 3, 4]#,6] # integer index of session_date list in rat config
+
 [data_dirs]
 # OpenEphys folders below (list of strings)
 # should have the "Record Node ###" folder inside it
 OE = [
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
+    
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/session20221116/2022-11-16_16-19-28_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/session20221117/2022-11-17_17-08-07_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/inkblot/session20230323/2023-03-23_14-41-46_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/human-finger/sean-pipeline/session20231003/2023-10-03_16-52-50_myo',
     ]
 # KiloSort folders below (list of strings)
 # should have the "Record Node ###" folder inside it, and
-# "KilosortResults" in the "recording99" folder
+# concatenated_data folder inside that, and "sorted0" folder (for latest sort),
+# or a "best_sort" symlink to the best sort folder you want to use
 KS = [
     # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/cleopatra/2022-07-15_15-16-47_myo/'
-    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-16_16-19-28_myo',
-    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/2022-11-17_17-08-07_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/session20221116/2022-11-16_16-19-28_myo',
+    '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/godzilla/session20221117/2022-11-17_17-08-07_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/treadmill/sean-pipeline/inkblot/session20230323/2023-03-23_14-41-46_myo',
+    # '/snel/share/data/rodent-ephys/open-ephys/human-finger/sean-pipeline/session20231003/2023-10-03_16-52-50_myo',
     ]
 # Anipose folders below (list of strings)
 # should have the pose-3d folder inside it
@@ -28,7 +38,11 @@ anipose = [
     # '/snel/share/data/anipose/session20221117',
     # '/snel/share/data/anipose/session20221220_128test/',
     # '/snel/share/data/anipose/session20230106_128test2/'
-    '/snel/share/data/anipose/session20230209_godzilla_vids/'
+    # '/snel/share/data/anipose/session20230209_godzilla_vids/'
+    # '/snel/share/data/anipose/session20230627_inkblot_vids',
+    # '/snel/share/data/anipose/analysis20230823_all_rat_vids/',
+    # '/snel/share/data/anipose/analysis20230829_inkblot+kitkat/',
+    '/snel/share/data/anipose/analysis20230830_godzilla',
 ]
 
 [rat]
@@ -52,41 +66,82 @@ camera_fps=100 #100 FPS
 vid_length=20 #10/20/30 seconds
 
 [rat.godzilla]
-bodyparts_list = []# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
-bodypart_for_alignment = ['palm_L_y'] # must provide 1 bodypart for alignment, e.g., palm_L_y
-session_date = ['20221117-8', '20221117-10'] # ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9'] #['20221116-3','20221116-5','20221116-6','20221116-7','20221116-8','20221116-9'] | #['20221117-4']
-treadmill_speed = [15, 15]#[5, 10, 5, 10, 10] # [10]
-treadmill_incline = [0, 0]#[0, 0, 0, 0, 0] # [0]
+bodyparts_list = ['palm_L_y', 'palm_R_y']#['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']# empty list, or ['palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']
+bodypart_for_alignment = ['palm_L_y'] # must provide 1 bodypart for alignment, e.g., ['palm_L_y']
+session_date = ['20221116-3','20221116-5','20221116-7','20221116-8','20221116-9','20221117-4', '20221117-5','20221117-6','20221117-8', '20221117-9']
+treadmill_speed = [ 5, 10,  5, 10, 10, 10,  5,  5, 15, 15 ]
+treadmill_incline = [ 0,  0,  0,  0,  0, 0, 15,  0,  0, 15 ]
+# session_date =  ['20221117-4', '20221117-5','20221117-6','20221117-8', '20221117-9']
+# treadmill_speed = [10,  5,  5, 15, 15 ]
+# treadmill_incline = [0, 15,  0,  0, 15 ]
+camera_fps = 125 #125 FPS
+vid_length = 60 #30/60 seconds
+
+[rat.inkblot]
+bodyparts_list = ['palm_L_y','palm_L_z']#,'palm_R_y','mtar_L_y','mtar_R_y'#,'palm_L_z','palm_R_z']#,'mtar_L_y','mtar_R_y']#['palm_L_y', 'palm_L_z','palm_R_y', 'palm_R_z']#['mtar_L_y','mtar_L_z','mtar_R_y','mtar_R_z'] #['palm_L_y']
+bodypart_for_alignment = ['palm_L_y']
+session_date = ['20230323-4','20230323-6','20230323-7','20230323-8','20230323-9','20230323-10','20230323-11']# <- # GOOD recordings, no frame drops #['20230323-2','20230323-5','20230323-10','20230323-11','20230323-9','20230323-12'] 
+treadmill_speed =   [ 12, 18, 12, 12, 12, 12, 12 ]
+treadmill_incline = [  0,  0, 20, 20, 20, 10, 10 ]
+camera_fps = 125 #125 FPS
+vid_length = 60 #30/60 seconds
+
+[rat.kitkat]
+bodyparts_list = ['palm_L_y','palm_R_y','mtar_L_y','mtar_R_y']
+bodypart_for_alignment = ['palm_L_y']
+session_date = ['20230420-0','20230420-1','20230420-2','20230420-3','20230420-4','20230420-5',
+                '20230420-6','20230420-7','20230420-8','20230420-9','20230420-10','20230420-11',
+                '20230420-12','20230420-13','20230420-14','20230420-15','20230420-17', '20230420-18',
+                '20230420-19']
+                #['20230421-0','20230421-1','20230421-2','20230421-3','20230421-4','20230421-5',
+                #'20230421-6','20230421-7','20230421-8','20230421-9','20230421-10','20230421-11',
+                #'20230421-12','20230421-13','20230421-14','20230421-15','20230421-16','20230421-17']
+treadmill_speed =   [ 12, 12, 12, 12, 12, 12, 12, 12, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18 ]
+treadmill_incline = [  0,  5,  5, 10, 10, 15, 15, 20,  0,  5,  5, 10, 15, 20,  0,  5, 10, 15, 20 ]
+camera_fps = 125 #125 FPS
+vid_length = 60 #30/60 seconds
+
+[rat.human]
+bodyparts_list = []
+bodypart_for_alignment = []
+session_date = ['20231003-0']
+treadmill_speed =   [ 0 ]
+treadmill_incline = [ 0 ]
 camera_fps = 125 #125 FPS
 vid_length = 60 #30/60 seconds
 
 [analysis]
 MU_spike_amplitudes_list = [[30,200],[200.0001,500],[500.0001,800],[800.0001,1100],[1100.0001,2000]]
-ephys_channel_idxs_list = [12,13,14,15]#[2,4,10,12,13,14,15]#[2,4]#[10,12]#[13,14,15] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
-filter_ephys = 'notch' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 350-7000Hz
-sort_method = 'kilosort' # 'kilosort'/'thresholding'
+ephys_channel_idxs_list =  [1,2,4,13,14,15] #[0,4,5,6,7,8,12,13,14,15] #,10,11,12,13,14,15] #,2,5,10,11,12]#,4,5,12,13,14,15]#[2,4,10,12,13,14,15]#[2,4]#[10,12]#[13,14,15] #[1,2,4,5,9,10,11,12,14]#[7]#[13]#[2,4,5,7,8,11]#[1,2,3,4,13,14]
+filter_ephys = 'both' # 'notch' | 'bandpass' | 'both' # notch is 60Hz and bandpass is 250-5000Hz
+ephys_cutoffs = [250,5000] #Hz, 2-element list
+sort_method = 'kilosort' # 'kilosort'/'thresholding'/'none'
+sort_to_use = 'best' #'20231016_173800' # 'latest' | 'best' | 'YYYYMMDD_HHMMSS' # 'latest' is the latest sort, 'best' is the best sort, or a specific date-time string
+disable_anipose = false # set Boolean
 bodypart_for_reference = 'tailbase' # choose bodypart to use as origin, without _x/_y/_z suffix, plug into origin_offsets as a value to subtract for that coordinate
 bodypart_ref_filter =  2 #Hz, Boolean/int Example: (False to disable filtering of bodypart_for_reference, 2 for 2Hz cutoff lowpass)
-filter_all_anipose = false # 'highpass' | 'lowpass' | 'bandpass' | 'median' | or Boolean false/0 # highpass is 0.5Hz, lowpass is 30Hz, bandpass is 0.5-30Hz
-trial_reject_bounds_mm = false # [[-25,25],[-25,25]] #mm, Boolean/Integer/2D List, rejects trials outside bounds of the trial average at each bodypart's alignment timepoint. Examples: Boolean / 40 / [[10,40],[-10,25]] for peak, trough values
-trial_reject_bounds_sec = [0.1,1] # [0.4,0.7] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
+filter_all_anipose = false #'bandpass' # 'highpass' | 'lowpass' | 'bandpass' | 'median' | or Boolean false/0 # highpass is 0.5Hz, lowpass is 30Hz, bandpass is 0.5-30Hz
+anipose_cutoffs = [0.5,30] #Hz, 2-element list
+trial_reject_bounds_mm = [[-25,25],[-25,25]] #mm, Boolean/Integer/2D List, rejects trials outside bounds of the median at two timepoints for each bodypart: the alignment point and halfway through the stride. Examples: Boolean / 40 / [[10,40],[-10,25]] for peak, trough values
+trial_reject_bounds_sec = [0.4,1] #seconds, time window of step duration outside of which trials get rejected. Examples: [0, 0.550] or [0.550, 0.6]
+trial_reject_bounds_vel = [0.075,0.5] #m/s, Boolean/1D List, rejects trials outside velocity bounds for chosen bodypart (e.g. tailbase). Examples: Boolean / 0.5 / [[0,0.5],[0,0.5]] for peak, trough values
 origin_offsets = {x=-18,y='tailbase',z=135} # Values recorded from origin to treadmill bounds, bodypart string, or use zeroes for no offset. If bodypart_for_reference is set for one coordinate, it overrides setting and will subtract for that coordinate. Examples: [-18,211,135]/[-87,211,135]/[52,-310,0]/['nose','tailbase',135], can be disbaled with disabled with 0
-save_binned_MU_data = 0 # set Boolean
-time_frame = [0,1] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
-bin_width_ms = 10
+save_binned_MU_data = true # set Boolean
+time_frame = [0.1,0.2] # 2-element list slicing between 0 and 1, e.g., [0,.5], set to 1 for full ephys plotting
+bin_width_ms = 10 #ms
 num_rad_bins = 100
 smoothing_window = [10,10,10,10,10] # bins
-phase_align = false # set Boolean, pertains to process_spikes.smooth() and process_spikes.state_space()
+phase_align = false # set Boolean, affects process_spikes.smoothed() and process_spikes.state_space()
 align_to = 'foot off' # "foot strike"/"foot off"
 export_data = false
 
 [plotting]
 ### Plotting parameters
-plot_type = "bin_and_count" # sort | bin_and_count | raster | smooth | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin | multi_state_space
-plot_units =  [1,14]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
-do_plot = 1 # set Boolean, whether to actually generate plots, set 2 for all plots in rat-loco function chain
-N_colors = 10 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
-plot_template = 'plotly_white'
+plot_type = "sort" # sort | bin_and_count | raster | smoothed | state_space | MU_space_stepwise | behavioral_space | cluster_steps | pandas_eda | spike_motion_plot | multi_bin_and_count | multijoin_bin_and_count | multi_state_space
+plot_units =  [[22,19,30,31,15,25,18,5,34,2,0,29,14,28],[8,5,3,35,31,21,34,16,36,10]] #[7,1,5,3,2,4,0]#[4,5,0,1,2,8,3]#[10,14,2,5,12]#[27,26,8,15,23,18]#[12,3,5,17,15,16]#[14,6,24,10,15,47,18,7]#[11,8,3,10,5,19,2,9]#[117,12,23,118,6,96,50,119]#[4,6,9,28,31,33,46] # [0,1,2,3,4,5,6] # used for MU ID or KS cluster number
+do_plot = 3 # set integer, how to generate plots, 0 is false, 1 is true, set 2 for all plots in rat-loco function chain, set 3 to write plots to html instead (where implemented)
+N_colors = 11 #len(MU_spike_amplitudes_list)*len(ephys_channel_idxs_list)+len(bodyparts_list)
+plot_template = 'presentation'
 Possible_Themes =['ggplot2','seaborn','simple_white','plotly','plotly_white','plotly_dark',
                     'presentation','xgridoff','ygridoff','gridon','none']
 qual_dict_keys = ['Paired', 'Pastel1', 'Set1', 'Set3']

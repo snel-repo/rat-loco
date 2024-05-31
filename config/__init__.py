@@ -1,6 +1,7 @@
 # __init__.py
 
 import pathlib
+
 try:
     import tomllib
 except ModuleNotFoundError:

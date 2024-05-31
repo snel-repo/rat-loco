@@ -166,3 +166,11 @@ cython_debug/
 
 # profiling files
 *.prof
+
+# HTMLs
+*.html
+
+# images
+*.png
+*.svg
+*.jpg

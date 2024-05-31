@@ -1,0 +1,11 @@
+# environment.yaml
+
+name: rat-loco
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pip
+  - ffmpeg
+  - pip:
+    - -r requirements.txt

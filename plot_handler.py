@@ -53,24 +53,34 @@ def sort_plot(
             )[0]
         )
         number_of_rows = (
-            len(bodyparts_list) + len(ephys_channel_idxs_list) + number_of_channels // 2 + 1
+            len(bodyparts_list)
+            + len(ephys_channel_idxs_list)
+            + number_of_channels // 2
+            + 1
         )
         row_spec_list = number_of_rows * [[None]]
         row_spec_list[0] = [{"rowspan": len(bodyparts_list)}]
-        row_spec_list[len(bodyparts_list)] = [{"rowspan": len(ephys_channel_idxs_list)}]
+        row_spec_list[len(bodyparts_list)] = [
+            {"rowspan": len(ephys_channel_idxs_list), "secondary_y": True}
+        ]
         row_spec_list[len(bodyparts_list) + len(ephys_channel_idxs_list)] = [
             {"rowspan": 1}
         ]  # number_of_channels//2+1}]
     elif sort_method == "kilosort":
         number_of_channels = 1
         number_of_rows = (
-            len(bodyparts_list) + len(ephys_channel_idxs_list) + len(MU_spikes_dict) // 6 + 1
+            len(bodyparts_list)
+            + len(ephys_channel_idxs_list)
+            + len(MU_spikes_dict) // 6
+            + 1
         )
         row_spec_list = number_of_rows * [[None]]
         row_spec_list[0] = [{"rowspan": len(bodyparts_list)}]
-        row_spec_list[len(bodyparts_list)] = [{"rowspan": len(ephys_channel_idxs_list)}]
+        row_spec_list[len(bodyparts_list)] = [
+            {"rowspan": len(ephys_channel_idxs_list), "secondary_y": True}
+        ]
         row_spec_list[len(bodyparts_list) + len(ephys_channel_idxs_list)] = [
-            {"rowspan": 1}
+            {"rowspan": 2}
         ]  # len(MU_spikes_dict)//6+1}]
     elif (
         sort_method == "none"
@@ -84,20 +94,27 @@ def sort_plot(
         number_of_rows = len(bodyparts_list) + len(ephys_channel_idxs_list)
         row_spec_list = number_of_rows * [[None]]
         row_spec_list[0] = [{"rowspan": len(bodyparts_list)}]
-        row_spec_list[len(bodyparts_list)] = [{"rowspan": len(ephys_channel_idxs_list)}]
+        row_spec_list[len(bodyparts_list)] = [
+            {"rowspan": len(ephys_channel_idxs_list), "secondary_y": True}
+        ]
     else:
-        print("Error! sort_method is not recognized, must be 'thresholding', 'kilosort', or 'none'")
+        print(
+            "Error! sort_method is not recognized, must be 'thresholding', 'kilosort', or 'none'"
+        )
         return
 
     MU_labels = list(OE_dict.keys())[session_iterator]
     if len(bodyparts_list) > 0 and sort_method != "none":
         sub_titles = (
             f"<b>Locomotion Kinematics: {list(anipose_dict.keys())[session_iterator]}</b>",
-            f"<b>Neural Activity: {MU_labels}</b>",
+            f"<b>Motor Unit Activity: {MU_labels}</b>",
             f"<b>Sorted Spikes: {MU_labels}</b>",
         )
     elif sort_method == "none":
-        sub_titles = (f"<b>Neural Activity: {MU_labels}</b>", f"<b>Sorted Spikes: {MU_labels}</b>")
+        sub_titles = (
+            f"<b>Neural Activity: {MU_labels}</b>",
+            f"<b>Sorted Spikes: {MU_labels}</b>",
+        )
     else:
         sub_titles = (f"<b>Neural Activity: {MU_labels}</b>",)
 
@@ -131,7 +148,9 @@ def sort_plot(
                         go.Scatter(
                             x=time_axis_for_anipose[step_time_slice],
                             y=np.round(
-                                processed_anipose_df[bodypart_for_alignment[0]][step_time_slice],
+                                processed_anipose_df[bodypart_for_alignment[0]][
+                                    step_time_slice
+                                ],
                                 decimals=1,
                             ),
                             name=bodyparts_list[bodypart_counter] + " processed"
@@ -140,7 +159,8 @@ def sort_plot(
                             mode="lines",
                             opacity=0.9,
                             line=dict(
-                                width=2, color=color_list[bodypart_counter % len(color_list)]
+                                width=2,
+                                color=color_list[bodypart_counter % len(color_list)],
                             ),
                         ),
                         row=1,
@@ -191,13 +211,17 @@ def sort_plot(
                             go.Scatter(
                                 x=time_axis_for_anipose[step_time_slice],
                                 y=np.round(
-                                    processed_anipose_df[name][step_time_slice], decimals=1
+                                    processed_anipose_df[name][step_time_slice],
+                                    decimals=1,
                                 ),  # + 25*bodypart_counter,
                                 name=bodyparts_list[bodypart_counter] + " processed",
                                 mode="lines",
                                 opacity=0.9,
                                 line=dict(
-                                    width=2, color=color_list[bodypart_counter % len(color_list)]
+                                    width=2,
+                                    color=color_list[
+                                        bodypart_counter % len(color_list)
+                                    ],
                                 ),
                             ),
                             row=1,
@@ -214,7 +238,10 @@ def sort_plot(
                                 mode="lines",
                                 opacity=0.9,
                                 line=dict(
-                                    width=2, color=color_list[bodypart_counter % len(color_list)]
+                                    width=2,
+                                    color=color_list[
+                                        bodypart_counter % len(color_list)
+                                    ],
                                 ),
                             ),
                             row=1,
@@ -227,13 +254,17 @@ def sort_plot(
             and bodypart_for_reference is not None
         ):
             # plot x/y/z reference trace
-            dims = [key for key in origin_offsets.keys() if type(origin_offsets[key]) is not int]
+            dims = [
+                key
+                for key in origin_offsets.keys()
+                if type(origin_offsets[key]) is not int
+            ]
             for dim, ref_trace in zip(dims, ref_bodypart_trace_list):
                 fig.add_trace(
                     go.Scatter(
                         x=time_axis_for_anipose[step_time_slice],
                         y=np.round(ref_trace[step_time_slice], decimals=1),
-                        name=f"Ref: {bodypart_for_reference}_{dim}, {bodypart_ref_filter}Hz lowpass",
+                        name=f"Ref: {bodypart_for_reference}_{dim}, {bodypart_ref_filter}Hz",
                         mode="lines",
                         opacity=0.9,
                         line=dict(width=3, color="lightgray", dash="dash"),
@@ -246,19 +277,20 @@ def sort_plot(
     # plot all ephys traces and/or SYNC channel
     row_spacing = 0
     for iChannel, channel_number in enumerate(ephys_channel_idxs_list):
-        row_spacing = (
-            np.clip(
-                0.9
-                * np.max(
-                    chosen_ephys_data_continuous_obj.samples[
-                        slice_for_ephys_during_video, channel_number
-                    ]
-                ),
-                2000,
-                5000,
+        if iChannel != 0:  # do not add row spacing for first channel
+            row_spacing = (
+                np.clip(
+                    0.9
+                    * np.max(
+                        chosen_ephys_data_continuous_obj.samples[
+                            slice_for_ephys_during_video, channel_number
+                        ]
+                    ),
+                    2000,
+                    5000,
+                )
+                + row_spacing
             )
-            + row_spacing
-        )
         fig.add_trace(
             go.Scatter(
                 x=time_axis_for_ephys[slice_for_ephys_during_video],
@@ -280,7 +312,9 @@ def sort_plot(
                     ),
                     decimals=1,
                 ),
-                name=f"CH{channel_number}" if channel_number not in [-1, 16] else "SYNC",
+                name=f"CH{channel_number}"
+                if channel_number not in [-1, 16]
+                else "SYNC",
                 mode="lines",
                 marker=dict(color=CH_colors[color_stride * iChannel])
                 if sort_method == "thresholding"
@@ -291,6 +325,19 @@ def sort_plot(
             row=len(bodyparts_list) + 1,
             col=1,
         )
+        # add a np.nan to the secondary y axis, just so the axis is drawn, one for each channel
+        fig.add_trace(
+            go.Scatter(
+                x=[np.nan],
+                y=[-row_spacing] if channel_number not in [-1, 16] else [2000],
+                name="",
+                showlegend=False,
+            ),
+            row=len(bodyparts_list) + 1,
+            col=1,
+            secondary_y=True,
+        )
+
         if sort_method == "kilosort":
             # UnitKeys = MU_spikes_dict.keys()
             UnitKeys = plot_units
@@ -329,7 +376,8 @@ def sort_plot(
                             ]
                         )
                         sliced_MU_spikes_dict[iUnitKey] = (
-                            MU_spikes_dict_for_unit.copy() - slice_for_ephys_during_video.start
+                            MU_spikes_dict_for_unit.copy()
+                            - slice_for_ephys_during_video.start
                         )
                     row2 = len(bodyparts_list) + len(ephys_channel_idxs_list) + 1
                     # plot spike locations onto each selected ephys trace
@@ -350,7 +398,9 @@ def sort_plot(
                             marker=dict(color=MU_colors[color_stride * unit_counter])
                             if sort_method == "thresholding"
                             else dict(
-                                color=MU_colors[color_stride * (unit_counter % len(UnitKeys))]
+                                color=MU_colors[
+                                    color_stride * (unit_counter % len(UnitKeys))
+                                ]
                             ),
                             opacity=0.9,
                             line=dict(width=3),
@@ -368,7 +418,11 @@ def sort_plot(
                                     MU_spikes_dict_for_unit
                                 ],
                                 y=np.zeros(
-                                    len(time_axis_for_ephys[slice_for_ephys_during_video])
+                                    len(
+                                        time_axis_for_ephys[
+                                            slice_for_ephys_during_video
+                                        ]
+                                    )
                                 ).astype(np.int16)
                                 - unit_counter,
                                 name=f"CH{channel_number}, Unit {iUnitKey}"
@@ -389,26 +443,81 @@ def sort_plot(
                         )
                     unit_counter += 1
 
-    fig.update_xaxes(
-        title_text="<b>Time (s)</b>",
-        row=len(bodyparts_list) + len(ephys_channel_idxs_list) + sorted_spikes_row_space,
-        col=1,  # secondary_y=False
-    )
-    fig.update_yaxes(title_text="<b>Position (mm)</b>", row=1, col=1)
-    fig.update_yaxes(
-        title_text="<b>Voltage (uV)</b>", row=len(bodyparts_list) + sorted_spikes_row_space, col=1
-    )
     if sort_method != "none":
-        fig.update_yaxes(
-            title_text="<b>Sorted Spikes</b>",
-            row=len(bodyparts_list) + len(ephys_channel_idxs_list) + sorted_spikes_row_space,
-            col=1,  # secondary_y=True
+        fig.update_xaxes(
+            title_text="<b>Time (s)</b>",
+            row=len(bodyparts_list)
+            + len(ephys_channel_idxs_list)
+            + sorted_spikes_row_space,
+            col=1,  # secondary_y=False
         )
+
+        # kinematic data axis
+        fig.update_yaxes(title_text="<b>Position (mm)</b>", row=1, col=1)
+
+        # ephys data axis, plot on left side,
+        # use max value of channel 1 to set first tick value, and then subtract below zero by the value in row_spacing to get the last tick value
+        # use 500 as the tick spacing
+        # set tick values through all data, but only show [-1000, -500, 0, 500, 1000]
+        tickvalz = np.arange(
+            -2000 - row_spacing,
+            2000,
+            500,
+        )
+        ticktext = len(tickvalz) * [""]
+        ticktext[-6:-1] = ["-1000", "-500", "0", "500", "1000"]
+        fig.update_yaxes(
+            title_text="<b>Voltage (uV)</b>",
+            tickvals=tickvalz,
+            ticktext=ticktext,
+            row=len(bodyparts_list) + sorted_spikes_row_space,
+            col=1,
+            range=[tickvalz[0], tickvalz[-1]],
+            side="right",
+        )
+
+        # second axis for ephys data, labeling the channel number, on the left side
+        fig.update_yaxes(
+            title_text="<b>Channel #</b>",
+            tickvals=np.arange(
+                -row_spacing,
+                1,
+                row_spacing / (len(ephys_channel_idxs_list) - 1),
+            ),
+            ticktext=list(reversed(ephys_channel_idxs_list)),
+            row=len(bodyparts_list) + sorted_spikes_row_space,
+            col=1,
+            secondary_y=True,
+            side="left",
+            range=[tickvalz[0], tickvalz[-1]],
+            showgrid=False,
+        )
+        # sorted spikes axis, make tick labels the unit numbers
+        fig.update_yaxes(
+            title_text="<b>Unit #</b>",
+            row=len(bodyparts_list)
+            + len(ephys_channel_idxs_list)
+            + sorted_spikes_row_space,
+            col=1,  # secondary_y=True
+            tickvals=list(range(-len(UnitKeys) + 1, 1)),
+            ticktext=list(reversed(UnitKeys)),
+        )
+    else:
+        fig.update_xaxes(title_text="<b>Time (s)</b>", row=1, col=1)
+        fig.update_yaxes(title_text="<b>Voltage (uV)</b>", row=1, col=1)
+    # set theme to chosen template and shift the
     fig.update_layout(template=plot_template)
     figs = [fig]
 
     if do_plot == 3:
-        path_to_write_to = Path.cwd().joinpath(session_ID + ".html")
+        # path_to_write_to = Path.cwd().joinpath(session_ID + ".html")
+        # add beginning and end time in seconds to filename
+        path_to_write_to = Path.cwd().joinpath(
+            "_".join(session_ID.split("_")[:2])
+            + f"_{time_axis_for_ephys[slice_for_ephys_during_video][0]:.1f}"
+            + f"-{time_axis_for_ephys[slice_for_ephys_during_video][-1]:.1f}sec"
+            + ".html"
+        )
         fig.write_html(str(path_to_write_to))
         plot_flag = False
     if plot_flag:
@@ -459,7 +568,9 @@ def bin_and_count_plot(
         export_data,
     ) = CFG["analysis"].values()
     # unpack plotting inputs
-    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
+    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
+        "plotting"
+    ].values()
     color_stride = 1
     fig1 = make_subplots(
         rows=1,
@@ -484,7 +595,9 @@ def bin_and_count_plot(
                 MU_step_aligned_spike_idxs_dict[str(iUnitKey)]
             ).ravel()
         except:
-            MU_step_aligned_idxs = np.concatenate(MU_step_aligned_spike_idxs_dict[iUnitKey]).ravel()
+            MU_step_aligned_idxs = np.concatenate(
+                MU_step_aligned_spike_idxs_dict[iUnitKey]
+            ).ravel()
         MU_step_aligned_idxs_ms = MU_step_aligned_idxs / ephys_sample_rate * 1000
         fig1.add_trace(
             go.Histogram(
@@ -567,7 +680,9 @@ def bin_and_count_plot(
                 for iUnitKey in np.fromiter(MU_iter, "int")[order_by_count]
             ],
             y=MU_spikes_count_across_all_steps[order_by_count],
-            marker_color=[MU_colors[iColor] for iColor in range(0, len(MU_colors), color_stride)],
+            marker_color=[
+                MU_colors[iColor] for iColor in range(0, len(MU_colors), color_stride)
+            ],
             opacity=1,
             showlegend=False
             # name="Counts Bar Plot"
@@ -637,7 +752,9 @@ def raster_plot(
             # if number_of_units==2:
             fig.add_trace(
                 go.Scatter(
-                    x=MU_step_aligned_spike_idxs_dict[iUnitKey][iStep] / ephys_sample_rate * 1000,
+                    x=MU_step_aligned_spike_idxs_dict[iUnitKey][iStep]
+                    / ephys_sample_rate
+                    * 1000,
                     y=np.zeros(samples_per_step)
                     - unit_counter
                     - step_counter
@@ -783,7 +900,11 @@ def state_space_plot(
                     name=f"step{true_step}",
                     mode="lines",
                     opacity=0.5,
-                    line=dict(width=5, color=MU_colors[int(treadmill_incline) // 5], dash="solid"),
+                    line=dict(
+                        width=5,
+                        color=MU_colors[int(treadmill_incline) // 5],
+                        dash="solid",
+                    ),
                 )
             )
         elif number_of_units >= 3:
@@ -795,7 +916,11 @@ def state_space_plot(
                     name=f"step{true_step}",
                     mode="lines",
                     opacity=0.5,
-                    line=dict(width=8, color=MU_colors[int(treadmill_incline) // 5], dash="solid"),
+                    line=dict(
+                        width=8,
+                        color=MU_colors[int(treadmill_incline) // 5],
+                        dash="solid",
+                    ),
                 )
             )
     # plot mean traces for each unit
@@ -841,9 +966,15 @@ def state_space_plot(
                 camera=dict(
                     eye=dict(x=-2, y=-0.3, z=0.2)
                 ),  # the default values are 1.25, 1.25, 1.25
-                xaxis=dict(title_text=f"<b>Unit {plot_units[0]} Activity</b>", range=[0, 1.0]),
-                yaxis=dict(title_text=f"<b>Unit {plot_units[1]} Activity</b>", range=[0, 1.0]),
-                zaxis=dict(title_text=f"<b>Unit {plot_units[2]} Activity</b>", range=[0, 1.0]),
+                xaxis=dict(
+                    title_text=f"<b>Unit {plot_units[0]} Activity</b>", range=[0, 1.0]
+                ),
+                yaxis=dict(
+                    title_text=f"<b>Unit {plot_units[1]} Activity</b>", range=[0, 1.0]
+                ),
+                zaxis=dict(
+                    title_text=f"<b>Unit {plot_units[2]} Activity</b>", range=[0, 1.0]
+                ),
                 aspectmode="manual",  # this string can be 'data', 'cube', 'auto', 'manual'
                 # custom aspectratio is defined as follows:
                 aspectratio=dict(x=1, y=1, z=1),
@@ -885,7 +1016,11 @@ def MU_space_stepwise(
     row_spec_list = number_of_rows * [[None]]
     if len(plot_units) >= 3 and MU_smoothed_spikes_3d_array.any(1).any(0).sum() >= 3:
         row_spec_list[0] = [
-            {"type": "scatter3d", "rowspan": len(plot_units) * number_of_steps, "b": 0.01}
+            {
+                "type": "scatter3d",
+                "rowspan": len(plot_units) * number_of_steps,
+                "b": 0.01,
+            }
         ]  # 1% padding between
     elif len(plot_units) >= 2 and MU_smoothed_spikes_3d_array.any(1).any(0).sum() >= 2:
         row_spec_list[0] = [
@@ -907,7 +1042,9 @@ def MU_space_stepwise(
             ),
         )
     )
-    big_fig[iPar].layout.annotations[0].update(text=figs[0].layout.title.text)  # .split('<br>')[1])
+    big_fig[iPar].layout.annotations[0].update(
+        text=figs[0].layout.title.text
+    )  # .split('<br>')[1])
     for iTrace in range(len(figs[0].data)):
         big_fig[iPar].add_trace(figs[0].data[iTrace], row=1, col=1)
 

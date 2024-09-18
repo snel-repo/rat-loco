@@ -15,7 +15,9 @@ from scipy.signal import butter, filtfilt, find_peaks, medfilt
 def butter_highpass(cutoff, fs, order=2):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
-    b, a = butter(order, normal_cutoff, btype="high")  # , analog=False) #, output="sos")
+    b, a = butter(
+        order, normal_cutoff, btype="high"
+    )  # , analog=False) #, output="sos")
     return b, a
 
 
@@ -44,7 +46,9 @@ def butter_bandpass(cutoffs, fs, order=2):
     assert len(cutoffs) == 2
     nyq = 0.5 * fs
     normal_cutoffs = np.array(cutoffs) / nyq
-    b, a = butter(order, normal_cutoffs, btype="bandpass")  # , analog=False, output="sos")
+    b, a = butter(
+        order, normal_cutoffs, btype="bandpass"
+    )  # , analog=False, output="sos")
     return b, a
 
 
@@ -57,7 +61,14 @@ def butter_bandpass_filter(data, cutoffs, fs, order=2):
 # function identifies peaks and troughs of anipose data, and
 # optionally applies filtering and offset or reference bodypart subtraction
 def peak_align_and_filt(
-    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
+    chosen_rat,
+    OE_dict,
+    KS_dict,
+    anipose_dict,
+    CH_colors,
+    MU_colors,
+    CFG,
+    session_iterator,
 ):
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -87,7 +98,9 @@ def peak_align_and_filt(
         export_data,
     ) = CFG["analysis"].values()
     # unpack plotting inputs
-    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
+    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
+        "plotting"
+    ].values()
     # unpack chosen rat inputs
     (
         bodyparts_list,
@@ -104,7 +117,9 @@ def peak_align_and_filt(
     rat_name = str(chosen_rat).lower()
     treadmill_speed = str(treadmill_speed[session_iterator]).zfill(2)
     treadmill_incline = str(treadmill_incline[session_iterator]).zfill(2)
-    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    session_ID = (
+        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    )
 
     # # format inputs to avoid ambiguities
     # rat_name = str(rat_name).lower()
@@ -119,7 +134,9 @@ def peak_align_and_filt(
     not_bodypart_substr = ["ref", "origin"]
     reduced_cols = [str for str in cols if any(sub in str for sub in bodypart_substr)]
     bodypart_cols = [
-        str for str in reduced_cols if not any(sub in str for sub in not_bodypart_substr)
+        str
+        for str in reduced_cols
+        if not any(sub in str for sub in not_bodypart_substr)
     ]
     bodypart_anipose_df = anipose_dict[bodypart_cols]
     ref_aligned_df = bodypart_anipose_df.copy()
@@ -127,7 +144,9 @@ def peak_align_and_filt(
     if origin_offsets is not False:
         for iDim in bodypart_substr:
             # if iDim == 'Labels': continue # skip if Labels column
-            body_dim_cols = [str for str in bodypart_cols if any(sub in str for sub in [iDim])]
+            body_dim_cols = [
+                str for str in bodypart_cols if any(sub in str for sub in [iDim])
+            ]
             # iDim_cols = [str for str in bodypart_cols if str in [iDim]]
             if type(origin_offsets[iDim[-1]]) is int:
                 ref_aligned_df[body_dim_cols] = (
@@ -203,7 +222,9 @@ def peak_align_and_filt(
         filtered_anipose_data = butter_highpass_filter(
             data=sorted_body_anipose_df.values, cutoff=low, fs=camera_fps, order=2
         )
-        print(f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz).")
+        print(
+            f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz)."
+        )
     elif filter_all_anipose == "lowpass":
         filtered_anipose_data = butter_lowpass_filter(
             data=sorted_body_anipose_df.values, cutoff=high, fs=camera_fps, order=2
@@ -213,13 +234,18 @@ def peak_align_and_filt(
         )
     elif filter_all_anipose == "bandpass":
         filtered_anipose_data = butter_bandpass_filter(
-            data=sorted_body_anipose_df.values, cutoffs=[low, high], fs=camera_fps, order=2
+            data=sorted_body_anipose_df.values,
+            cutoffs=[low, high],
+            fs=camera_fps,
+            order=2,
         )
         print(
             f"A {filter_all_anipose} filter was applied to all anipose data (lowcut = {low}Hz, highcut = {high}Hz)."
         )
     elif filter_all_anipose == "median":
-        filtered_anipose_data = medfilt(sorted_body_anipose_df.values, kernel_size=[7, 1])
+        filtered_anipose_data = medfilt(
+            sorted_body_anipose_df.values, kernel_size=[7, 1]
+        )
         print(f"A {filter_all_anipose} filter was applied to all anipose data.")
     else:  # do not filter
         filtered_anipose_data = sorted_body_anipose_df.values
@@ -238,7 +264,9 @@ def peak_align_and_filt(
     )
 
     foot_off_idxs, _ = find_peaks(
-        -processed_anipose_df[bodypart_for_alignment[0]],  # invert signal to find the troughs
+        -processed_anipose_df[
+            bodypart_for_alignment[0]
+        ],  # invert signal to find the troughs
         height=[None, None],
         threshold=None,
         distance=30,
@@ -305,9 +333,13 @@ def peak_align_and_filt(
         stop_step = int(len(step_idxs) * time_frame[1])
         step_slice = slice(start_step, stop_step)
         if align_to == "foot strike":
-            step_time_slice = slice(foot_strike_idxs[start_step], foot_strike_idxs[stop_step - 1])
+            step_time_slice = slice(
+                foot_strike_idxs[start_step], foot_strike_idxs[stop_step - 1]
+            )
         elif align_to == "foot off":
-            step_time_slice = slice(foot_off_idxs[start_step], foot_off_idxs[stop_step - 1])
+            step_time_slice = slice(
+                foot_off_idxs[start_step], foot_off_idxs[stop_step - 1]
+            )
 
     # step_time_slice = slice(all_step_idx[0],all_step_idx[1])
     sliced_steps_diff = pd.DataFrame(
@@ -350,7 +382,14 @@ def peak_align_and_filt(
 
 
 def trialize_steps(
-    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
+    chosen_rat,
+    OE_dict,
+    KS_dict,
+    anipose_dict,
+    CH_colors,
+    MU_colors,
+    CFG,
+    session_iterator,
 ):
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -380,7 +419,9 @@ def trialize_steps(
         export_data,
     ) = CFG["analysis"].values()
     # unpack plotting inputs
-    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
+    (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
+        "plotting"
+    ].values()
     # unpack chosen rat inputs
     (
         bodyparts_list,
@@ -397,7 +438,9 @@ def trialize_steps(
     rat_name = str(chosen_rat).lower()
     treadmill_speed = str(treadmill_speed[session_iterator]).zfill(2)
     treadmill_incline = str(treadmill_incline[session_iterator]).zfill(2)
-    session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    session_ID = (
+        f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
+    )
 
     (
         processed_anipose_df,
@@ -408,7 +451,14 @@ def trialize_steps(
         step_time_slice,
         ref_bodypart_trace_list,
     ) = peak_align_and_filt(
-        chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_iterator
+        chosen_rat,
+        OE_dict,
+        KS_dict,
+        anipose_dict,
+        CH_colors,
+        MU_colors,
+        CFG,
+        session_iterator,
     )
 
     # get column titles
@@ -441,7 +491,9 @@ def trialize_steps(
     trialized_anipose_df_lst = []
     # slice off the last step index to avoid miscounting (avoid off by one error)
     true_step_idx = np.array([*range(step_slice.start, step_slice.stop)])[:-1]
-    for iStep, (i_step_idx, i_true_step_num) in enumerate(zip(step_idxs[:-1], true_step_idx)):
+    for iStep, (i_step_idx, i_true_step_num) in enumerate(
+        zip(step_idxs[:-1], true_step_idx)
+    ):
         trialized_anipose_df_lst.append(
             processed_anipose_df.iloc[
                 i_step_idx - pre_align_offset : i_step_idx + post_align_offset, :
@@ -450,7 +502,8 @@ def trialize_steps(
         # give column names to each step for all bodyparts, and
         # zerofill to the max number of digits in `true_step_idx`
         trialized_anipose_df_lst[iStep].columns = [
-            iCol + f"_{str(i_true_step_num).zfill(int(1+np.log10(true_step_idx.max())))}"
+            iCol
+            + f"_{str(i_true_step_num).zfill(int(1+np.log10(true_step_idx.max())))}"
             for iCol in trialized_anipose_df_lst[iStep].columns
         ]
         trialized_anipose_df_lst[iStep].reset_index(drop=True, inplace=True)
@@ -471,8 +524,12 @@ def trialize_steps(
         upper_bound = trial_reject_bounds_sec[1]
         step_durations_sec = np.diff(step_idxs) / camera_fps
         for iBodypart in bodyparts_list:
-            trials_above_lb.update(true_step_idx[np.where(step_durations_sec > lower_bound)])
-            trials_below_ub.update(true_step_idx[np.where(step_durations_sec < upper_bound)])
+            trials_above_lb.update(
+                true_step_idx[np.where(step_durations_sec > lower_bound)]
+            )
+            trials_below_ub.update(
+                true_step_idx[np.where(step_durations_sec < upper_bound)]
+            )
             # get trial idxs between bounds, loop through bodyparts, remove trials outside
             keep_trial_set.intersection_update(trials_above_lb & trials_below_ub)
         print(
@@ -513,16 +570,22 @@ def trialize_steps(
                 df_peak_or_trough = df_peak_and_trough_list[1]
             for iBodypart in bodyparts_list:
                 lower_bound = (
-                    df_peak_or_trough.filter(like=iBodypart).median() - trial_reject_bounds_mm
+                    df_peak_or_trough.filter(like=iBodypart).median()
+                    - trial_reject_bounds_mm
                 )
                 upper_bound = (
-                    df_peak_or_trough.filter(like=iBodypart).median() + trial_reject_bounds_mm
+                    df_peak_or_trough.filter(like=iBodypart).median()
+                    + trial_reject_bounds_mm
                 )
                 trials_above_lb.update(
-                    true_step_idx[(df_peak_or_trough.filter(like=iBodypart) > lower_bound).values]
+                    true_step_idx[
+                        (df_peak_or_trough.filter(like=iBodypart) > lower_bound).values
+                    ]
                 )
                 trials_below_ub.update(
-                    true_step_idx[(df_peak_or_trough.filter(like=iBodypart) < upper_bound).values]
+                    true_step_idx[
+                        (df_peak_or_trough.filter(like=iBodypart) < upper_bound).values
+                    ]
                 )
                 # get trial idxs between bounds, loop through bodyparts, remove trials outside
                 keep_trial_set.intersection_update(trials_above_lb & trials_below_ub)
@@ -554,16 +617,22 @@ def trialize_steps(
                     )
                     trials_above_lb.update(
                         true_step_idx[
-                            (df_peak_or_trough.filter(like=iBodypart) > lower_bound).values
+                            (
+                                df_peak_or_trough.filter(like=iBodypart) > lower_bound
+                            ).values
                         ]
                     )
                     trials_below_ub.update(
                         true_step_idx[
-                            (df_peak_or_trough.filter(like=iBodypart) < upper_bound).values
+                            (
+                                df_peak_or_trough.filter(like=iBodypart) < upper_bound
+                            ).values
                         ]
                     )
                     # get trial idxs between bounds, loop through bodyparts, remove trials outside
-                    keep_trial_set.intersection_update(trials_above_lb & trials_below_ub)
+                    keep_trial_set.intersection_update(
+                        trials_above_lb & trials_below_ub
+                    )
                     print(
                         f"{pair_description[ii]} bounds for {iBodypart}: {np.round(lower_bound,decimals=2)} to {np.round(upper_bound,decimals=2)}"
                     )
@@ -622,7 +691,12 @@ def trialize_steps(
 
     sliced_steps_diff = np.diff(step_idxs)
     kept_steps_diff = pd.DataFrame(
-        np.array([sliced_steps_diff[iTrial - step_slice.start] for iTrial in (keep_trial_set)])
+        np.array(
+            [
+                sliced_steps_diff[iTrial - step_slice.start]
+                for iTrial in (keep_trial_set)
+            ]
+        )
     )
     print(
         f"Inter-step timing stats for {align_to}, for steps: {keep_trial_set}:\
@@ -658,13 +732,16 @@ def trialize_steps(
 
 
 # calculates reference bodypart's velocity in xyz axes using diff() function
-def get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmill_speed):
+def get_bodypart_velocity(
+    processed_anipose_df, bodypart_for_reference, treadmill_speed
+):
     bodypart_velocity = {}
     bodypart_velocity[bodypart_for_reference + "_x_vel"] = np.gradient(
         processed_anipose_df[bodypart_for_reference + "_x"]
     )
     bodypart_velocity[bodypart_for_reference + "_y_vel"] = np.add(
-        np.gradient(processed_anipose_df[bodypart_for_reference + "_y"]), float(treadmill_speed)
+        np.gradient(processed_anipose_df[bodypart_for_reference + "_y"]),
+        float(treadmill_speed),
     )
     bodypart_velocity[bodypart_for_reference + "_z_vel"] = np.gradient(
         processed_anipose_df[bodypart_for_reference + "_z"]
@@ -679,7 +756,10 @@ def get_bodypart_velocity(processed_anipose_df, bodypart_for_reference, treadmil
             x=time,
             y=np.gradient(
                 np.add(
-                    np.gradient(processed_anipose_df[bodypart_for_reference + "_y"], edge_order=1),
+                    np.gradient(
+                        processed_anipose_df[bodypart_for_reference + "_y"],
+                        edge_order=1,
+                    ),
                     float(treadmill_speed),
                 )
             ),

@@ -17,14 +17,24 @@ def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
         sort_folder_name = "best_sort"
     else:
         if sort_to_use == "latest":
-            print("No folder named 'sorted0' in " + data_dir)
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "No folder named 'sorted0' in " + data_dir,
+            )
         elif sort_to_use == "best":
-            print("No symlink called 'best_sort' in " + data_dir)
+            raise FileNotFoundError(
+                errno.ENOENT,
+                os.strerror(errno.ENOENT),
+                "No folder named 'best_sort' in " + data_dir,
+            )
         else:
             try:
                 # ensure that the user inputted a valid timestamp
                 _ = int(sort_to_use)
-                if (len(sort_to_use) != 15) or (sort_to_use[8] != "_"):
+                if (len(sort_to_use) != 15 and len(sort_to_use) != 21) or (
+                    sort_to_use[8] != "_"
+                ):
                     raise ValueError
                 for iFile in os.listdir(data_dir):
                     if sort_to_use in iFile:
@@ -35,12 +45,17 @@ def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
             except ValueError:
                 traceback.print_exc()
                 print(
-                    "ValueError: sort_to_use must be either 'latest', 'best', or a 'YYYYMMDD_HHMMSS' timestamp."
+                    "ValueError: sort_to_use must be either 'latest', 'best', 'YYYYMMDD_HHMMSS', or 'YYYYMMDD_HHMMSSffffff' timestamp."
                 )
                 sys.exit(1)
             except FileNotFoundError:
                 traceback.print_exc()
-                print("FileNotFoundError: No folder named " + sort_to_use + " in " + data_dir)
+                print(
+                    "FileNotFoundError: No folder named "
+                    + sort_to_use
+                    + " in "
+                    + data_dir
+                )
                 sys.exit(1)
             except:
                 traceback.print_exc()
@@ -70,15 +85,21 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
             (len(session.recordnodes[0].recordings))
         )  # store number of recordings to allow next looping operation
 
-        sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
-        ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat"))
-        ops = scipy.io.loadmat(ops_path)
-        recordings_to_use = ops["recordings"]
+        if CFG["analysis"]["sort_method"] != "none":
+            sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
+            ops_path = str(
+                pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat")
+            )
+            ops = scipy.io.loadmat(ops_path)
+            recordings_to_use = ops["recordings"].ravel()
+        else:
+            # just use first recording if no sorting is desired
+            recordings_to_use = [1]
 
         for iRec in range(number_of_recordings_per_session_list[-1]):
-            if session.recordnodes[0].recordings[iRec].directory.split("recording")[-1] in [
-                str(rec) for rec in recordings_to_use
-            ]:
+            if session.recordnodes[0].recordings[iRec].directory.split("recording")[
+                -1
+            ] not in [str(rec) for rec in recordings_to_use]:
                 continue  # skips recording if it is not in recordings_to_use
             file_list = os.listdir(session.recordnodes[0].recordings[iRec].directory)
             chosen_recording = 0
@@ -111,7 +132,9 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
                 )
 
                 for iChannel in range(
-                    session.recordnodes[0].recordings[iRec].info["continuous"][0]["num_channels"]
+                    session.recordnodes[0]
+                    .recordings[iRec]
+                    .info["continuous"][0]["num_channels"]
                 ):
                     # Multiply each recording samples by the measured "bit_volts" value.
                     # This converts from 16-bit number to uV for continuous channels and V for ADC channels
@@ -176,17 +199,20 @@ def load_anipose_data(chosen_rat, CFG, session_iterator):
             # format inputs to avoid ambiguities
             session_date = CFG["rat"][chosen_rat]["session_date"][iSess]
             rat_name = str(chosen_rat).lower()
-            treadmill_speed = str(CFG["rat"][chosen_rat]["treadmill_speed"][iSess]).zfill(2)
-            treadmill_incline = str(CFG["rat"][chosen_rat]["treadmill_incline"][iSess]).zfill(2)
-            session_ID = (
-                f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
-            )
+            treadmill_speed = str(
+                CFG["rat"][chosen_rat]["treadmill_speed"][iSess]
+            ).zfill(2)
+            treadmill_incline = str(
+                CFG["rat"][chosen_rat]["treadmill_incline"][iSess]
+            ).zfill(2)
+            session_ID = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
             file_list = os.listdir(directory_name)
             for filename in file_list:
                 if filename.endswith(".csv"):
                     if filename.__contains__(session_ID):
                         with open(
-                            str(pathlib.PurePath(directory_name).joinpath(filename)), "r"
+                            str(pathlib.PurePath(directory_name).joinpath(filename)),
+                            "r",
                         ) as csv_file:
                             yield _read_pose_3d_data(csv_file)
                         break
@@ -224,7 +250,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
     )  # stores .info Session IDs of each recording in order under directory keys
     data_dir_list = CFG["data_dirs"]["KS"]
     sort_to_use = CFG["analysis"]["sort_to_use"]
-    session_iterator_copy = session_iterator.copy()  # copy to avoid modifying original list
+    session_iterator_copy = (
+        session_iterator.copy()
+    )  # copy to avoid modifying original list
     cluster_id_ephys_data_dict = {}
     for data_dir in data_dir_list:
         recording_lengths_arr_list = []
@@ -245,9 +273,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         for iRec in range(
             (len(session.recordnodes[0].recordings))
         ):  # loops through all individual recording folders
-            if session.recordnodes[0].recordings[iRec].directory.split("recording")[-1] not in [
-                str(rec) for rec in recordings_to_use
-            ]:
+            if session.recordnodes[0].recordings[iRec].directory.split("recording")[
+                -1
+            ] not in [str(rec) for rec in recordings_to_use]:
                 continue  # skips recording if it is not in recordings_to_use
             # first, find file which has 'Rhythm' in it, then define timestamps_file variable
             Rhythm_folder = [
@@ -264,9 +292,13 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 + "/timestamps.npy"
             )
             num_channels_list.append(
-                session.recordnodes[0].recordings[iRec].info["continuous"][0]["num_channels"]
+                session.recordnodes[0]
+                .recordings[iRec]
+                .info["continuous"][0]["num_channels"]
             )
-            recording_lengths_arr_list.append(len(np.load(timestamps_file)) * num_channels_list[-1])
+            recording_lengths_arr_list.append(
+                len(np.load(timestamps_file)) * num_channels_list[-1]
+            )
             temp_dir = os.listdir(session.recordnodes[0].recordings[iRec].directory)
             if any(".info" in file for file in temp_dir):  # checks if .info file exists
                 session_ID = [i for i in temp_dir if ".info" in i][0]
@@ -274,8 +306,12 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 for i in session_iterator_copy:
                     session_date = CFG["rat"][chosen_rat]["session_date"][i]
                     rat_name = str(chosen_rat).lower()
-                    treadmill_speed = str(CFG["rat"][chosen_rat]["treadmill_speed"][i]).zfill(2)
-                    treadmill_incline = str(CFG["rat"][chosen_rat]["treadmill_incline"][i]).zfill(2)
+                    treadmill_speed = str(
+                        CFG["rat"][chosen_rat]["treadmill_speed"][i]
+                    ).zfill(2)
+                    treadmill_incline = str(
+                        CFG["rat"][chosen_rat]["treadmill_incline"][i]
+                    ).zfill(2)
                     session_ID_CFG = f"{session_date}_{rat_name}_speed{treadmill_speed}_incline{treadmill_incline}"
                     if session_ID.__contains__(session_ID_CFG):
                         session_IDs_temp.append(session_ID.split(".")[0])
@@ -286,7 +322,10 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                     else:
                         continue
             else:
-                print(session.recordnodes[0].recordings[iRec].directory + "has no .info file")
+                print(
+                    session.recordnodes[0].recordings[iRec].directory
+                    + "has no .info file"
+                )
                 return
         if len(session_IDs_temp) == 0:
             continue
@@ -296,7 +335,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
 
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
-        recording_lengths_arr = np.array(recording_lengths_arr_list) / np.array(num_channels_list)
+        recording_lengths_arr = np.array(recording_lengths_arr_list) / np.array(
+            num_channels_list
+        )
         assert all(
             recording_lengths_arr.astype(int) == recording_lengths_arr
         ), "Recording lengths not divisible by number of channels!"
@@ -338,7 +379,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         # print(16 * (spikeTimes_arr[-1] - spikeTimes_arr[0]))
 
         # take cumsum to use later for recording file index boundaries
-        recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(), 0, 0).astype(int)
+        recording_len_cumsum = np.insert(recording_lengths_arr.cumsum(), 0, 0).astype(
+            int
+        )
 
         # session_IDs_values = session_IDs_dict.values()
         # session_IDs_iter = iter(session_IDs_values)
@@ -354,7 +397,10 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                     clusterIDs_ephys_spikeTimes_id_all[
                         # filter time ranges to be within the chosen session, and subtract the lower bound index
                         np.where(
-                            (clusterIDs_ephys_spikeTimes_id_all > recording_len_cumsum[iChosen])
+                            (
+                                clusterIDs_ephys_spikeTimes_id_all
+                                > recording_len_cumsum[iChosen]
+                            )
                             & (
                                 clusterIDs_ephys_spikeTimes_id_all
                                 < recording_len_cumsum[iChosen + 1]

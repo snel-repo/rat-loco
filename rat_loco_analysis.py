@@ -11,16 +11,19 @@ session_indexes = CFG["chosen_sessions"]
 
 ### Process Chosen Plotting Parameters
 # black to grey
-CH_colors = cl.to_rgb(cl.interp(cl.scales["6"]["seq"]["Greys"], 2 * CFG["plotting"]["N_colors"]))[
-    -1 : -(CFG["plotting"]["N_colors"] + 1) : -1
-]
+CH_colors = cl.to_rgb(
+    cl.interp(cl.scales["6"]["seq"]["Greys"], 2 * CFG["plotting"]["N_colors"])
+)[-1 : -(CFG["plotting"]["N_colors"] + 1) : -1]
 # rainbow scale
-MU_colors = cl.to_rgb(cl.interp(cl.scales["10"]["div"]["Spectral"], CFG["plotting"]["N_colors"]))
+MU_colors = cl.to_rgb(
+    cl.interp(cl.scales["10"]["div"]["Spectral"], CFG["plotting"]["N_colors"])
+)
 # rotate or reverse colors palettes, if needed
 MU_colors_deque = deque(MU_colors)
 MU_colors = list(MU_colors_deque)
 MU_colors.reverse()
 MU_colors = MU_colors[:-1]
+# vv overwrite with named colors vv # (comment out below block if not)
 MU_colors = [
     "royalblue",
     "green",
@@ -250,7 +253,9 @@ def rat_loco_analysis(
                 export_data,
             ) = CFG["analysis"].values()
             # unpack plotting inputs
-            (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
+            (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
+                "plotting"
+            ].values()
             # unpack chosen rat inputs
             (
                 bodyparts_list,
@@ -301,21 +306,33 @@ def rat_loco_analysis(
                             col=(iHist // len(MU_spike_amplitudes_list)) + 1,
                         )
                 # keep track of session recording parameters, and set those for subplot titles
-                big_fig.layout.annotations[2 * ii].update(text=figs[0].layout.annotations[0].text)
+                big_fig.layout.annotations[2 * ii].update(
+                    text=figs[0].layout.annotations[0].text
+                )
                 big_fig.layout.annotations[2 * ii + 1].update(
                     text=figs[0].layout.annotations[1].text
                 )
                 # set y-axis titles to those received from bin_and_count()
-                big_fig.update_yaxes(title_text=figs[0].layout.yaxis.title.text, row=ii + 1, col=1)
-                big_fig.update_yaxes(title_text=figs[0].layout.yaxis2.title.text, row=ii + 1, col=2)
+                big_fig.update_yaxes(
+                    title_text=figs[0].layout.yaxis.title.text, row=ii + 1, col=1
+                )
+                big_fig.update_yaxes(
+                    title_text=figs[0].layout.yaxis2.title.text, row=ii + 1, col=2
+                )
             # set x-axis titles to those received from bin_and_count()
-            big_fig.update_xaxes(title_text=figs[0].layout.xaxis.title.text, row=ii + 1, col=1)
-            big_fig.update_xaxes(title_text=figs[0].layout.xaxis2.title.text, row=ii + 1, col=2)
+            big_fig.update_xaxes(
+                title_text=figs[0].layout.xaxis.title.text, row=ii + 1, col=1
+            )
+            big_fig.update_xaxes(
+                title_text=figs[0].layout.xaxis2.title.text, row=ii + 1, col=2
+            )
             big_fig.update_yaxes(matches="y")
             # Reduce opacity to see both histograms
             big_fig.update_traces(opacity=0.75)
             # set bars to overlap and all titles, and use received title from bin_and_count()
-            big_fig.update_layout(barmode="overlay", title_text=figs[0].layout.title.text)
+            big_fig.update_layout(
+                barmode="overlay", title_text=figs[0].layout.title.text
+            )
             iplot(big_fig)
 
         elif CFG["plotting"]["plot_type"] == "multi_raster":
@@ -352,7 +369,9 @@ def rat_loco_analysis(
                 export_data,
             ) = CFG["analysis"].values()
             # unpack plotting inputs
-            (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG["plotting"].values()
+            (plot_type, plot_units, do_plot, N_colors, plot_template, *_) = CFG[
+                "plotting"
+            ].values()
             # unpack chosen rat inputs
             (
                 bodyparts_list,
@@ -395,14 +414,20 @@ def rat_loco_analysis(
                     text=fig.layout.title.text.split("<sup>")[1][:-6]
                 )
                 # set y-axis titles to those received from bin_and_count()
-                big_fig.update_yaxes(title_text=fig.layout.yaxis.title.text, row=ii + 1, col=1)
+                big_fig.update_yaxes(
+                    title_text=fig.layout.yaxis.title.text, row=ii + 1, col=1
+                )
             # set x-axis titles to those received from bin_and_count()
-            big_fig.update_xaxes(title_text=fig.layout.xaxis.title.text, row=ii + 1, col=1)
+            big_fig.update_xaxes(
+                title_text=fig.layout.xaxis.title.text, row=ii + 1, col=1
+            )
             # Reduce opacity to see both histograms
             big_fig.update_traces(opacity=0.75)
             # set bars to overlap and all titles, and use received title from bin_and_count()
             big_fig.update_layout(
-                barmode="overlay", title_text=fig.layout.title.text, template=plot_template
+                barmode="overlay",
+                title_text=fig.layout.title.text,
+                template=plot_template,
             )
             iplot(big_fig)
 

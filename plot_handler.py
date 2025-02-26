@@ -37,6 +37,7 @@ def sort_plot(
     MU_spikes_dict,
     MU_colors,
     CH_colors,
+    ops,
 ):
     # compute number of channels and units per channel
     # then compute a color stride value to maximize use of color space
@@ -80,7 +81,7 @@ def sort_plot(
             {"rowspan": len(ephys_channel_idxs_list), "secondary_y": True}
         ]
         row_spec_list[len(bodyparts_list) + len(ephys_channel_idxs_list)] = [
-            {"rowspan": 2}
+            {"rowspan": 1}
         ]  # len(MU_spikes_dict)//6+1}]
     elif (
         sort_method == "none"
@@ -105,18 +106,24 @@ def sort_plot(
 
     MU_labels = list(OE_dict.keys())[session_iterator]
     if len(bodyparts_list) > 0 and sort_method != "none":
+        try:
+            sub_titles = (
+                f"<b>Locomotion Kinematics: {list(anipose_dict.keys())[session_iterator]}</b>",
+                f"<b>Motor Unit Activity: {MU_labels}</b>",
+                f"<b>Sorted Spikes: {MU_labels}</b>",
+            )
+        except AttributeError:
+            sub_titles = (
+                f"<b>Motor Unit Activity: {MU_labels}</b>",
+                f"<b>Sorted Spikes: {MU_labels}</b>",
+            )
+    elif sort_method == "none":
         sub_titles = (
-            f"<b>Locomotion Kinematics: {list(anipose_dict.keys())[session_iterator]}</b>",
             f"<b>Motor Unit Activity: {MU_labels}</b>",
             f"<b>Sorted Spikes: {MU_labels}</b>",
         )
-    elif sort_method == "none":
-        sub_titles = (
-            f"<b>Neural Activity: {MU_labels}</b>",
-            f"<b>Sorted Spikes: {MU_labels}</b>",
-        )
     else:
-        sub_titles = (f"<b>Neural Activity: {MU_labels}</b>",)
+        sub_titles = (f"<b>Motor Unit Activity: {MU_labels}</b>",)
 
     fig = make_subplots(
         rows=number_of_rows,
@@ -153,9 +160,11 @@ def sort_plot(
                                 ],
                                 decimals=1,
                             ),
-                            name=bodyparts_list[bodypart_counter] + " processed"
-                            if filter_all_anipose or origin_offsets
-                            else bodyparts_list[bodypart_counter],
+                            name=(
+                                bodyparts_list[bodypart_counter] + " processed"
+                                if filter_all_anipose or origin_offsets
+                                else bodyparts_list[bodypart_counter]
+                            ),
                             mode="lines",
                             opacity=0.9,
                             line=dict(
@@ -291,16 +300,62 @@ def sort_plot(
                 )
                 + row_spacing
             )
+        ### plot a copy of traces with delays removed
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=time_axis_for_ephys[slice_for_ephys_during_video],
+        #         # if statement provides different scalings and offsets for ephys vs. SYNC channel
+        #         y=np.round(
+        #             (
+        #                 chosen_ephys_data_continuous_obj.samples[
+        #                     slice_for_ephys_during_video, channel_number
+        #                 ]
+        #                 - row_spacing
+        #                 if channel_number not in [-1, 16]
+        #                 else (
+        #                     chosen_ephys_data_continuous_obj.samples[
+        #                         slice_for_ephys_during_video, channel_number
+        #                     ]
+        #                     + 4
+        #                 )
+        #                 * 0.5e3
+        #             ),
+        #             decimals=1,
+        #         ),
+        #         name=(
+        #             f"CH{channel_number}" if channel_number not in [-1, 16] else "SYNC"
+        #         ),
+        #         mode="lines",
+        #         marker=(
+        #             dict(color=CH_colors[color_stride * iChannel])
+        #             if sort_method == "thresholding"
+        #             else dict(color="firebrick")
+        #         ),
+        #         opacity=1,
+        #         line=dict(width=2),
+        #     ),
+        #     row=len(bodyparts_list) + 1,
+        #     col=1,
+        # )
+        if sort_method in ["none", "thresholding"]:
+            chan_delays = np.zeros(len(ephys_channel_idxs_list))
+        else:
+            chan_delays = ops["channelDelays"][
+                np.where(ops["chans_used"] == channel_number)[0][0]
+            ]
         fig.add_trace(
             go.Scatter(
                 x=time_axis_for_ephys[slice_for_ephys_during_video],
                 # if statement provides different scalings and offsets for ephys vs. SYNC channel
                 y=np.round(
                     (
-                        chosen_ephys_data_continuous_obj.samples[
-                            slice_for_ephys_during_video, channel_number
-                        ]
-                        - row_spacing
+                        np.roll(
+                            chosen_ephys_data_continuous_obj.samples[
+                                slice_for_ephys_during_video, channel_number
+                            ]
+                            - row_spacing,
+                            chan_delays,
+                        )
                         if channel_number not in [-1, 16]
                         else (
                             chosen_ephys_data_continuous_obj.samples[
@@ -312,15 +367,17 @@ def sort_plot(
                     ),
                     decimals=1,
                 ),
-                name=f"CH{channel_number}"
-                if channel_number not in [-1, 16]
-                else "SYNC",
+                name=(
+                    f"CH{channel_number}" if channel_number not in [-1, 16] else "SYNC"
+                ),
                 mode="lines",
-                marker=dict(color=CH_colors[color_stride * iChannel])
-                if sort_method == "thresholding"
-                else dict(color=CH_colors[color_stride * iChannel]),
+                marker=(
+                    dict(color=CH_colors[color_stride * iChannel])
+                    if sort_method == "thresholding"
+                    else dict(color=CH_colors[color_stride * iChannel])
+                ),
                 opacity=1,
-                line=dict(width=0.4),
+                line=dict(width=2),
             ),
             row=len(bodyparts_list) + 1,
             col=1,
@@ -352,8 +409,23 @@ def sort_plot(
                 if channel_number not in [-1, 16]:
                     if sort_method == "thresholding":
                         MU_spikes_dict_for_unit = (
-                            MU_spikes_dict[str(channel_number)][iUnitKey][:]
-                            + slice_for_ephys_during_video.start
+                            (
+                                MU_spikes_dict[str(channel_number)][iUnitKey][:]
+                                + slice_for_ephys_during_video.start
+                            )
+                            if time_frame == 1
+                            else MU_spikes_dict[str(channel_number)][iUnitKey][:][
+                                np.where(
+                                    (
+                                        MU_spikes_dict[str(channel_number)][iUnitKey][:]
+                                        > slice_for_ephys_during_video.start
+                                    )
+                                    & (
+                                        MU_spikes_dict[str(channel_number)][iUnitKey][:]
+                                        < slice_for_ephys_during_video.stop
+                                    )
+                                )
+                            ]
                         )
                         sliced_MU_spikes_dict[str(channel_number)][
                             iUnitKey
@@ -395,12 +467,14 @@ def sort_plot(
                             ),
                             name=f"CH{channel_number}, Unit {iUnitKey}",
                             mode="markers",
-                            marker=dict(color=MU_colors[color_stride * unit_counter])
-                            if sort_method == "thresholding"
-                            else dict(
-                                color=MU_colors[
-                                    color_stride * (unit_counter % len(UnitKeys))
-                                ]
+                            marker=(
+                                dict(color=MU_colors[color_stride * unit_counter])
+                                if sort_method == "thresholding"
+                                else dict(
+                                    color=MU_colors[
+                                        color_stride * (unit_counter % len(UnitKeys))
+                                    ]
+                                )
                             ),
                             opacity=0.9,
                             line=dict(width=3),
@@ -425,15 +499,17 @@ def sort_plot(
                                     )
                                 ).astype(np.int16)
                                 - unit_counter,
-                                name=f"CH{channel_number}, Unit {iUnitKey}"
-                                if sort_method == "thresholding"
-                                else f"KS Cluster: {iUnitKey}",
+                                name=(
+                                    f"CH{channel_number}, Unit {iUnitKey}"
+                                    if sort_method == "thresholding"
+                                    else f"KS Cluster: {iUnitKey}"
+                                ),
                                 mode="markers",
                                 marker_symbol="line-ns",
                                 marker=dict(
                                     color=MU_colors[color_stride * unit_counter],
                                     line_color=MU_colors[color_stride * unit_counter],
-                                    line_width=1.2,
+                                    line_width=2,
                                     size=10,
                                 ),
                                 opacity=1,
@@ -460,8 +536,8 @@ def sort_plot(
         # use 500 as the tick spacing
         # set tick values through all data, but only show [-1000, -500, 0, 500, 1000]
         tickvalz = np.arange(
-            -2000 - row_spacing,
-            2000,
+            -3000 - row_spacing,
+            3000,
             500,
         )
         ticktext = len(tickvalz) * [""]
@@ -479,11 +555,11 @@ def sort_plot(
         # second axis for ephys data, labeling the channel number, on the left side
         fig.update_yaxes(
             title_text="<b>Channel #</b>",
-            tickvals=np.arange(
-                -row_spacing,
-                1,
-                row_spacing / (len(ephys_channel_idxs_list) - 1),
-            ),
+            # tickvals=np.arange(
+            #     -row_spacing,
+            #     1,
+            #     row_spacing / (len(ephys_channel_idxs_list) - 1),
+            # ),
             ticktext=list(reversed(ephys_channel_idxs_list)),
             row=len(bodyparts_list) + sorted_spikes_row_space,
             col=1,
@@ -518,7 +594,13 @@ def sort_plot(
             + f"-{time_axis_for_ephys[slice_for_ephys_during_video][-1]:.1f}sec"
             + ".html"
         )
-        fig.write_html(str(path_to_write_to))
+        from datetime import datetime
+
+        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fig.write_html(
+            str(path_to_write_to.with_stem(path_to_write_to.stem + "_" + time_stamp))
+        )
+        fig.write_image(str(path_to_write_to.with_suffix(".svg")))
         plot_flag = False
     if plot_flag:
         iplot(fig)
@@ -603,9 +685,11 @@ def bin_and_count_plot(
             go.Histogram(
                 x=MU_step_aligned_idxs_ms,  # ms
                 xbins=dict(start=0, size=bin_width_ms),
-                name=str(iUnitKey) + "uV crossings"
-                if (sort_method == "thresholding")
-                else "KS cluster: " + str(iUnitKey),
+                name=(
+                    str(iUnitKey) + "uV crossings"
+                    if (sort_method == "thresholding")
+                    else "KS cluster: " + str(iUnitKey)
+                ),
                 marker_color=MU_colors[color_stride * iUnit],
             ),
             row=1,
@@ -625,9 +709,11 @@ def bin_and_count_plot(
             go.Histogram(
                 x=MU_step_2π_aligned_idxs,  # radians
                 xbins=dict(start=0, size=bin_width_radian),
-                name=str(iUnitKey) + "uV crossings"
-                if (sort_method == "thresholding")
-                else "KS cluster: " + str(iUnitKey),
+                name=(
+                    str(iUnitKey) + "uV crossings"
+                    if (sort_method == "thresholding")
+                    else "KS cluster: " + str(iUnitKey)
+                ),
                 marker_color=MU_colors[color_stride * iUnit],
                 showlegend=False,
             ),
@@ -670,21 +756,23 @@ def bin_and_count_plot(
     fig2.add_trace(
         go.Bar(
             # list comprehension to get threshold values for each isolated unit on this channel
-            x=[
-                str(iUnitKey) + "uV crossings"
-                for iUnitKey in np.fromiter(MU_iter, "int")[order_by_count]
-            ]
-            if sort_method == "thresholding"
-            else [
-                "KS Cluster: " + str(iUnitKey)
-                for iUnitKey in np.fromiter(MU_iter, "int")[order_by_count]
-            ],
+            x=(
+                [
+                    str(iUnitKey) + "uV crossings"
+                    for iUnitKey in np.fromiter(MU_iter, "int")[order_by_count]
+                ]
+                if sort_method == "thresholding"
+                else [
+                    "KS Cluster: " + str(iUnitKey)
+                    for iUnitKey in np.fromiter(MU_iter, "int")[order_by_count]
+                ]
+            ),
             y=MU_spikes_count_across_all_steps[order_by_count],
             marker_color=[
                 MU_colors[iColor] for iColor in range(0, len(MU_colors), color_stride)
             ],
             opacity=1,
-            showlegend=False
+            showlegend=False,
             # name="Counts Bar Plot"
         )
     )
@@ -830,9 +918,11 @@ def smoothed_plot(
             )
             fig.add_trace(
                 go.Scatter(
-                    x=np.arange(len(MU_smoothed_spikes_ztrimmed_array))
-                    if not phase_align
-                    else np.arange(2 * np.pi, number_of_bins),
+                    x=(
+                        np.arange(len(MU_smoothed_spikes_ztrimmed_array))
+                        if not phase_align
+                        else np.arange(2 * np.pi, number_of_bins)
+                    ),
                     y=MU_smoothed_spikes_ztrimmed_array,
                     name=f"step{iStep}_unit{iUnit}",
                     mode="lines",
@@ -844,9 +934,11 @@ def smoothed_plot(
     for iUnit in range(number_of_units):
         fig.add_trace(
             go.Scatter(
-                x=np.arange(MU_smoothed_spikes_3d_array.shape[1])
-                if not phase_align
-                else np.arange(2 * np.pi, number_of_bins),
+                x=(
+                    np.arange(MU_smoothed_spikes_3d_array.shape[1])
+                    if not phase_align
+                    else np.arange(2 * np.pi, number_of_bins)
+                ),
                 y=MU_smoothed_spikes_mean_2d_array[:, iUnit],
                 name=f"mean_unit{iUnit}",
                 mode="lines",

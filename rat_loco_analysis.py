@@ -66,6 +66,7 @@ def rat_loco_analysis(
     MU_colors,
     CFG,
     session_indexes,
+    ops,
 ):
     # if not running a multi-session analysis, the first element in session_indexes is used
 
@@ -83,6 +84,7 @@ def rat_loco_analysis(
                 MU_colors,
                 CFG,
                 session_indexes[0],
+                ops,
             )
 
         elif CFG["plotting"]["plot_type"] == "bin_and_count":
@@ -218,6 +220,7 @@ def rat_loco_analysis(
                     MU_colors,
                     CFG,
                     session_index,
+                    ops,
                 )
         elif CFG["plotting"]["plot_type"] == "multi_bin_and_count":
             from plotly.offline import iplot
@@ -462,7 +465,9 @@ if __name__ == "__main__":
     else:
         anipose_dict = None
     if CFG["analysis"]["sort_method"] == "kilosort":
-        KS_dict = load_KS_data(chosen_rat, CFG, session_iterator)
+        KS_dict, ops = load_KS_data(chosen_rat, CFG, session_iterator)
+    else:
+        KS_dict, ops = None, None
     rat_loco_analysis(
         chosen_rat,
         OE_dict,
@@ -472,6 +477,7 @@ if __name__ == "__main__":
         MU_colors,
         CFG,
         session_indexes,
+        ops,
     )
 
 ### list of plotly colors, for reference

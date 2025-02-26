@@ -55,7 +55,7 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 
 # main function for threshold sorting and producing spike indexes
 def sort(
-    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_index
+    chosen_rat, OE_dict, KS_dict, anipose_dict, CH_colors, MU_colors, CFG, session_index, ops
 ):
     ### Unpack CFG Inputs
     # unpack analysis inputs
@@ -405,6 +405,7 @@ def sort(
         MU_spikes_dict,
         MU_colors,
         CH_colors,
+        ops
     )
     ### END PLOTTING SECTION
 

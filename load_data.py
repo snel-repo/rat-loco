@@ -3,11 +3,13 @@ import os
 import pathlib
 import sys
 import traceback
+from pdb import set_trace
 
 import numpy as np
 import pandas as pd
 import scipy.io
 from open_ephys.analysis import Session
+from ruamel.yaml import YAML
 
 
 def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
@@ -66,7 +68,7 @@ def _validate_data_dir_input(data_dir: str, sort_to_use: str) -> str:
 
 def load_OE_data(chosen_rat, CFG, session_iterator):
     ## Outputs all extracted continuous ephys data packed in a dictionary and the keys are unique session identifiers
-
+    emu = False
     # initialize lists and counter variable(s)
     data_dir_list = CFG["data_dirs"]["OE"]
     sort_to_use = CFG["analysis"]["sort_to_use"]
@@ -84,23 +86,42 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
         number_of_recordings_per_session_list.append(
             (len(session.recordnodes[0].recordings))
         )  # store number of recordings to allow next looping operation
-
-        if CFG["analysis"]["sort_method"] != "none":
+        if CFG["analysis"]["sort_method"] not in ["none", "thresholding"]:
             sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
-            ops_path = str(
-                pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat")
-            )
-            ops = scipy.io.loadmat(ops_path)
-            recordings_to_use = ops["recordings"].ravel()
+            try:
+                ops_path = str(
+                    pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat")
+                )
+                ops = scipy.io.loadmat(ops_path)
+                recordings_to_use = ops["recordings"].ravel()
+            except FileNotFoundError:
+                # load emu_configs.yaml instead to get the recordings to use
+                yaml = YAML()
+                with open(
+                    str(
+                        pathlib.Path(data_dir)
+                        .joinpath(sort_folder_name, "emu_config.yaml")
+                        .resolve()
+                    ),
+                    "r",
+                ) as file:
+                    emu_config = yaml.load(file)
+                    recordings_to_use = emu_config["Data"]["emg_recordings"]
+                emu = True
+
         else:
             # just use first recording if no sorting is desired
-            recordings_to_use = [1]
+            recordings_to_use = None
 
         for iRec in range(number_of_recordings_per_session_list[-1]):
-            if session.recordnodes[0].recordings[iRec].directory.split("recording")[
-                -1
-            ] not in [str(rec) for rec in recordings_to_use]:
-                continue  # skips recording if it is not in recordings_to_use
+            if recordings_to_use is None:
+                # just use first one
+                pass
+            else:  # filter recordings to use
+                if session.recordnodes[0].recordings[iRec].directory.split("recording")[
+                    -1
+                ] not in [str(rec) for rec in recordings_to_use]:
+                    continue  # skips recording if it is not in recordings_to_use
             file_list = os.listdir(session.recordnodes[0].recordings[iRec].directory)
             chosen_recording = 0
             for filename in file_list:
@@ -168,7 +189,7 @@ def load_OE_data(chosen_rat, CFG, session_iterator):
         raise FileNotFoundError(
             errno.ENOENT,
             os.strerror(errno.ENOENT),
-            "No '.info' file matching your criteria was found. It could be wrong rat, speed, incline, etc.",
+            "No '.info' file matching your criteria was found. It could be wrong rat, speed, incline, etc. Or try another date format",
         )
 
     if len(continuous_ephys_data_list) == 1:
@@ -254,6 +275,7 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         session_iterator.copy()
     )  # copy to avoid modifying original list
     cluster_id_ephys_data_dict = {}
+    emu = False
     for data_dir in data_dir_list:
         recording_lengths_arr_list = []
         num_channels_list = []
@@ -267,16 +289,46 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
         )  # copy over structure.oebin from recording folder to recording99 folder or errors
 
         sort_folder_name = _validate_data_dir_input(data_dir, sort_to_use)
-        ops_path = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat"))
-        ops = scipy.io.loadmat(ops_path)
-        recordings_to_use = ops["recordings"][0]  # subtract 1 to match python indexing
+        try:
+            ops_path = str(
+                pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.mat")
+            )
+            ops = scipy.io.loadmat(ops_path)
+            brokenChan_path = str(
+                pathlib.PurePath(data_dir).joinpath(sort_folder_name, "brokenChan.mat")
+            )
+            brokenChan = scipy.io.loadmat(brokenChan_path)
+            ops["brokenChan"] = brokenChan["brokenChan"]
+            recordings_to_use = ops["recordings"][
+                0
+            ]  # subtract 1 to match python indexing
+        except FileNotFoundError:
+            # load ops.npy instead
+            ops_path = str(
+                pathlib.PurePath(data_dir).joinpath(sort_folder_name, "ops.npy")
+            )
+            ops = np.load(ops_path, allow_pickle=True).item()
+            # load emu_configs.yaml instead to get the recordings to use
+            yaml = YAML()
+            with open(
+                str(
+                    pathlib.Path(data_dir)
+                    .joinpath(sort_folder_name, "emu_config.yaml")
+                    .resolve()
+                ),
+                "r",
+            ) as file:
+                emu_config = yaml.load(file)
+                recordings_to_use = emu_config["Data"]["emg_recordings"]
+            emu = True
         for iRec in range(
             (len(session.recordnodes[0].recordings))
         ):  # loops through all individual recording folders
-            if session.recordnodes[0].recordings[iRec].directory.split("recording")[
-                -1
-            ] not in [str(rec) for rec in recordings_to_use]:
-                continue  # skips recording if it is not in recordings_to_use
+            if not emu:
+                if session.recordnodes[0].recordings[iRec].directory.split("recording")[
+                    -1
+                ] not in [str(rec) for rec in recordings_to_use]:
+                    continue  # skips recording if it is not in recordings_to_use
             # first, find file which has 'Rhythm' in it, then define timestamps_file variable
             Rhythm_folder = [
                 file
@@ -329,9 +381,9 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 return
         if len(session_IDs_temp) == 0:
             continue
-        session_IDs_dict[
-            data_dir
-        ] = session_IDs_temp  # adds list of session IDs to dict under directory key
+        session_IDs_dict[data_dir] = (
+            session_IDs_temp  # adds list of session IDs to dict under directory key
+        )
 
         # below divides each recording by the appropriate divisor
         # (divisor = number of channels in recording, which can be different by experimental error)
@@ -342,6 +394,26 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
             recording_lengths_arr.astype(int) == recording_lengths_arr
         ), "Recording lengths not divisible by number of channels!"
 
+        if not emu:
+            chans_used = np.setdiff1d(
+                np.arange(num_channels_list[0]), brokenChan["brokenChan"] - 1
+            )
+            ops["channelDelays"] = ops["channelDelays"][0]
+        else:
+            chans_used = (
+                np.sort(
+                    np.fromiter(
+                        [
+                            int(ch_str.split("CH")[-1])
+                            for ch_str in emu_config["emg_chans_used"]
+                        ],
+                        int,
+                    )
+                )
+                - 1
+            )  # subtract 1 to match python indexing
+            ops["channelDelays"] = ops["preprocessing"]["chan_delays"]
+        ops["chans_used"] = chans_used
         kilosort_files = []
         kilosort_folder = str(pathlib.PurePath(data_dir).joinpath(sort_folder_name))
         if "custom_merges" in os.listdir(kilosort_folder):
@@ -411,4 +483,4 @@ def load_KS_data(chosen_rat, CFG, session_iterator):
                 )
             cluster_id_ephys_data_dict[session_ID] = clusterIDs_ephys_spikeTimes
         print("Loaded KiloSort files:  ", cluster_id_ephys_data_dict.keys())
-    return cluster_id_ephys_data_dict
+    return cluster_id_ephys_data_dict, ops
